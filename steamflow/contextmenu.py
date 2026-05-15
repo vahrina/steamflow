@@ -19,9 +19,15 @@ UNSET = object()
 
 
 class SteamContextMenuPlugin(SteamPluginActionsMixin, Flox):
+    @property
+    def _runtime_data_dir(self):
+        path = self.plugin_dir / "var"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
     @cached_property
     def metric_cache_file(self):
-        return self.plugin_dir / "cache_metric.json"
+        return self._runtime_data_dir / "cache_metric.json"
 
     @cached_property
     def app_details_cache(self):
@@ -189,7 +195,7 @@ class SteamContextMenuPlugin(SteamPluginActionsMixin, Flox):
 
     @cached_property
     def logfile(self):
-        return str(self.plugin_dir / "plugin_steamflow.log")
+        return str(self._runtime_data_dir / "plugin_steamflow.log")
 
     @property
     def steam_path(self):

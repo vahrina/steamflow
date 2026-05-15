@@ -1,12 +1,12 @@
 {
-  "ID": "A7F3C4E16B8D4B5AB2D7139EEC8FA0B4",
+  "ID": "a5d2f1c8-3e47-4b9a-8c0d-7f6e5a4b3c2d",
   "ActionKeyword": "steam",
-  "Name": "SteamFlow",
-  "Description": "Launch Steam games and search Steam store",
-  "Author": "keekys",
-  "Version": "2.0.0",
+  "Name": "steamflow",
+  "Description": "search the store, browse your library & much more!",
+  "Author": "vahrina",
+  "Version": "0.1",
   "Language": "python",
-  "Website": "https://github.com/keekyslusus/SteamFlow",
+  "Website": "https://github.com/vahrina/SteamFlow",
   "IcoPath": "icons/steam.png",
   "ExecuteFileName": "main.py"
 }

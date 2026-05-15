@@ -5,7 +5,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import util_steam_date
+from . import util_currency, util_steam_date
 
 
 class SteamPluginWishlistMixin:
@@ -232,11 +232,41 @@ class SteamPluginWishlistMixin:
         self.save_wishlist_cache()
         return items, None
 
-    def format_wishlist_added(self, date_added):
-        formatted_age = util_steam_date.format_wishlisted_date(date_added)
-        if not formatted_age:
-            return ""
-        return f" | Wishlisted {formatted_age}"
+    def build_wishlist_subtitle(self, metadata, app_id):
+        """
+        rule: price (if any) | coming soon OR release date | reviews (only if priced/free + not coming soon)
+        reviews, playtime, platforms, prefix text all omitted
+        """
+        coming_soon = bool(metadata.get("coming_soon"))
+        has_price = metadata.get("has_price", False)
+        is_free = metadata.get("is_free", False)
+        parts = []
+
+        if coming_soon:
+            release_text = str(metadata.get("release_date_text", "") or "").strip()
+            if release_text and release_text.lower() not in self.RELEASE_DATE_PLACEHOLDER_VALUES:
+                parts.append(f"coming soon: {release_text}")
+            else:
+                parts.append("coming soon")
+        else:
+            # price
+            if is_free:
+                parts.append("free")
+            elif has_price:
+                price_info = metadata.get("price")
+                if price_info and "final" in price_info:
+                    price_str = util_currency.format_price(price_info["final"], self.get_country_code())
+                    discount = self.format_discount_percent(price_info)
+                    parts.append(f"{price_str}{discount}")
+
+            # reviews
+            if has_price or is_free:
+                review_summary = self.get_review_score(app_id, allow_network_on_miss=True)
+                review_str = self.format_review_score(review_summary).lstrip(" |")
+                if review_str:
+                    parts.append(review_str)
+
+        return " | ".join(parts)
 
     def build_wishlist_result(self, wishlist_item, allow_cold_detail_fetch=True):
         app_id = wishlist_item["appid"]
@@ -244,33 +274,34 @@ class SteamPluginWishlistMixin:
         if not metadata or not metadata.get("name"):
             return None
 
-        game_data = {
-            "type": "app",
-            "store_type": metadata.get("type"),
-            "id": app_id,
-            "name": metadata.get("name"),
-            "platforms": metadata.get("platforms", {}),
-            "tiny_image": metadata.get("capsule_image"),
-            "has_price": metadata.get("has_price", False),
-            "price": metadata.get("price"),
-            "is_free": metadata.get("is_free", False),
-            "coming_soon": metadata.get("coming_soon", False),
-            "release_date_text": metadata.get("release_date_text", ""),
-        }
-        result = self.process_game_data(game_data, allow_cold_metric_fetch=allow_cold_detail_fetch)
-        result["SubTitle"] = f"{result.get('SubTitle', '')}{self.format_wishlist_added(wishlist_item.get('date_added'))}"
-        return result
+        name = metadata.get("name")
+        image_url = metadata.get("capsule_image")
+        icon_path = self._resolve_game_icon(app_id, image_url)
+        subtitle = self.build_wishlist_subtitle(metadata, app_id)
+
+        return self.build_result(
+            title=f"\U0001F6D2 {name}",
+            subtitle=subtitle,
+            icon_path=icon_path,
+            context_data=self.build_context_data(
+                app_id=app_id,
+                name=name,
+                coming_soon=metadata.get("coming_soon"),
+            ),
+            action=self.build_action("open_steam_store_page", app_id),
+            AppID=str(app_id),
+        )
 
     def build_wishlist_status_result(self, loaded_count, total_count, search_term="", matching_count=None):
         if search_term:
-            title = f"Syncing Steam Wishlist For '{search_term}'"
+            title = f"syncing wishlist: '{search_term}'"
         else:
-            title = "Syncing Steam Wishlist"
+            title = "syncing wishlist"
 
-        subtitle = f"Loaded details for {loaded_count} of {total_count} wishlist games"
+        subtitle = f"{loaded_count}/{total_count} loaded"
         if matching_count is not None and search_term:
-            subtitle += f" | {matching_count} matches loaded so far"
-        subtitle += " | More titles will appear as the cache warms up"
+            subtitle += f" | {matching_count} match so far"
+        subtitle += " | more as cache warms"
         return self.build_result(
             title=title,
             subtitle=subtitle,
@@ -281,8 +312,8 @@ class SteamPluginWishlistMixin:
 
     def build_wishlist_empty_query_result(self, search_term):
         return self.build_result(
-            title=f"No wishlist games found for '{search_term}'",
-            subtitle="Try a different wishlist search term or wait for more wishlist details to finish loading",
+            title=f"no wishlist match: '{search_term}'",
+            subtitle="try different term or wait for cache",
             icon_path=self.OWNED_ICON,
             Score=20500,
         )
@@ -295,8 +326,8 @@ class SteamPluginWishlistMixin:
         if not wishlist_items:
             return [
                 self.build_result(
-                    title="Steam Wishlist",
-                    subtitle="No wishlist items found for the active Steam account",
+                    title="wishlist empty",
+                    subtitle="no items on active account",
                     icon_path=self.OWNED_ICON,
                     Score=20500,
                 )
@@ -322,7 +353,7 @@ class SteamPluginWishlistMixin:
                 name_matches = not normalized_search or normalized_search in metadata["name"].lower()
                 if name_matches:
                     matching_loaded_count += 1
-                    if len(visible_results) < self.MAX_WISHLIST_RESULTS:
+                    if len(visible_results) < self.get_max_wishlist_results():
                         result = self.build_wishlist_result(wishlist_item, allow_cold_detail_fetch=False)
                         if result:
                             visible_results.append(result)
@@ -357,8 +388,8 @@ class SteamPluginWishlistMixin:
 
         return [
             self.build_result(
-                title="Steam Wishlist",
-                subtitle="No wishlist items found for the active Steam account",
+                title="wishlist empty",
+                subtitle="no items on active account",
                 icon_path=self.OWNED_ICON,
                 Score=20500,
             )
@@ -367,9 +398,9 @@ class SteamPluginWishlistMixin:
     def build_wishlist_unavailable_result(self, reason):
         api_query = self.build_plugin_query("api")
         subtitle_by_reason = {
-            "Steam API Not Configured": f"Save a Steam Web API key first with `{api_query}`",
-            "Steam API Bound to Another Account": "The saved Steam API key is bound to another Steam account",
-            "No active Steam account found": "Sign into Steam to load your wishlist",
+            "Steam API Not Configured": f"save api key first: `{api_query}`",
+            "Steam API Bound to Another Account": "api key bound to another account",
+            "No active Steam account found": "sign into steam first",
         }
         action = None
         if reason in {"Steam API Not Configured", "Steam API Bound to Another Account"}:
@@ -379,8 +410,8 @@ class SteamPluginWishlistMixin:
                 "dontHideAfterAction": True,
             }
         return self.build_result(
-            title="Steam Wishlist Unavailable",
-            subtitle=subtitle_by_reason.get(reason, reason or "Couldn't load the Steam wishlist"),
+            title="wishlist unavailable",
+            subtitle=subtitle_by_reason.get(reason, str(reason or "couldn't load").lower()),
             icon_path=self.OWNED_ICON,
             action=action,
             Score=20500,

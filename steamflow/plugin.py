@@ -12,7 +12,6 @@ if str(LIB_PATH) not in sys.path:
     sys.path.insert(0, str(LIB_PATH))
 
 from flox import Flox
-import urllib3
 
 from .actions import SteamPluginActionsMixin
 from .accounts import SteamPluginAccountsMixin
@@ -119,17 +118,43 @@ class SteamPlugin(
         "linux": "Linux",
     }
 
-    urllib3 = urllib3
-
     def __init__(self):
         super().__init__()
         self.plugin_dir = PACKAGE_ROOT
+        self.runtime_dir = self.plugin_dir / "var"
+        self.runtime_dir.mkdir(parents=True, exist_ok=True)
         self._initialize_paths()
         self._initialize_minimal_state()
 
     @cached_property
     def logfile(self):
-        return str(self.plugin_dir / "plugin_steamflow.log")
+        return str(self.runtime_dir / "plugin_steamflow.log")
+
+    def _migrate_legacy_runtime_artifacts(self):
+        dest_root = self.runtime_dir
+        legacy_names = (
+            "plugin_steamflow.log",
+            "cache_country.json",
+            "cache_metric.json",
+            "cache_owned_games.json",
+            "cache_installed_games.json",
+            "cache_wishlist.json",
+            "steam_switch_worker.log",
+            "steam_wishlist_worker.log",
+            "steam_wishlist_worker.lock",
+            "steam_switch_worker.lock",
+        )
+        for name in legacy_names:
+            src = self.plugin_dir / name
+            if not src.is_file():
+                continue
+            dest = dest_root / name
+            if dest.exists():
+                continue
+            try:
+                src.replace(dest)
+            except OSError:
+                continue
 
     def _initialize_paths(self):
         self.state_lock = threading.RLock()
@@ -154,11 +179,13 @@ class SteamPlugin(
         self.WARNING_ICON = str(self.plugin_dir / "icons" / "warning.png")
         self.WISHLIST_ICON = str(self.plugin_dir / "icons" / "wishlist.png")
         self.cache_dir = self.plugin_dir / "cache_img"
-        self.country_cache_file = self.plugin_dir / "cache_country.json"
-        self.metric_cache_file = self.plugin_dir / "cache_metric.json"
-        self.wishlist_worker_lock_file = self.plugin_dir / "steam_wishlist_worker.lock"
-        self.owned_games_cache_file = self.plugin_dir / "cache_owned_games.json"
-        self.wishlist_cache_file = self.plugin_dir / "cache_wishlist.json"
+        self.country_cache_file = self.runtime_dir / "cache_country.json"
+        self.metric_cache_file = self.runtime_dir / "cache_metric.json"
+        self.wishlist_worker_lock_file = self.runtime_dir / "steam_wishlist_worker.lock"
+        self.owned_games_cache_file = self.runtime_dir / "cache_owned_games.json"
+        self.installed_games_cache_file = self.runtime_dir / "cache_installed_games.json"
+        self.wishlist_cache_file = self.runtime_dir / "cache_wishlist.json"
+        self._migrate_legacy_runtime_artifacts()
         self.secure_settings_dir = Path(self.settings_path).parent
         self.avatar_cache_dir = self.secure_settings_dir / "cache_avatar"
         self.avatar_frame_cache_file = self.secure_settings_dir / "cache_avatar_frame.json"
@@ -196,11 +223,15 @@ class SteamPlugin(
         self.wishlist_last_sync = 0
         self.wishlist_steamid64 = None
         self.pending_wishlist_refresh = False
+        self._pending_persona_state = None
+        self._pending_persona_state_expiry = 0.0
 
     def _initialize_runtime_state(self):
         if self.runtime_initialized:
             return
-        self.http_pool = urllib3.PoolManager(maxsize=8, retries=False, ca_certs=_CA_CERTS_PATH)
+        import urllib3 as _urllib3
+        self.urllib3 = _urllib3
+        self.http_pool = _urllib3.PoolManager(maxsize=8, retries=False, ca_certs=_CA_CERTS_PATH)
         self.installed_games = {}
         self.installed_game_paths = {}
         self.installed_game_statuses = {}
@@ -220,6 +251,7 @@ class SteamPlugin(
         self.achievement_progress_cache = {}
         self.app_details_cache = {}
         self.context_menu_cache = {}
+        self._icon_path_cache = {}
         self.owned_api_key_loaded = False
         self.owned_api_key_value = None
         self.owned_api_key_bound_steamid64 = None
@@ -256,14 +288,36 @@ class SteamPlugin(
         self.stats_cache_path = (self.steam_path / "appcache" / "stats") if self.steam_path else None
         self.localconfig_mtime = 0
         self.hidden_games_mtime = 0
-        self.update_installed_games()
         self.steam_icon_cache = (self.steam_path / "appcache" / "librarycache") if self.steam_path else None
+        if self.load_installed_games_cache():
+            self._start_installed_games_refresh()
+        else:
+            self.update_installed_games()
 
     def _start_background_tasks(self):
         threading.Thread(target=self._prewarm_connections, daemon=True).start()
         threading.Thread(target=self.cleanup_image_cache, daemon=True).start()
         self.schedule_owned_games_refresh()
         self.schedule_active_profile_summary_refresh()
+        self.schedule_wishlist_refresh()
+        threading.Thread(target=self._prewarm_wishlist_app_details, daemon=True).start()
+
+    def _prewarm_wishlist_app_details(self):
+        try:
+            with self.state_lock:
+                items = list(self.wishlist_items)
+                cached_steamid64 = self.wishlist_steamid64
+            if not items:
+                return
+            active_steamid64 = self.get_active_steam_user_steamid64()
+            if not active_steamid64 or cached_steamid64 != active_steamid64:
+                return
+            for wishlist_item in items[: self.WISHLIST_COLD_DETAIL_FETCH_LIMIT]:
+                app_id = str(wishlist_item.get("appid", "")).strip()
+                if app_id:
+                    self.get_app_details_metadata(app_id, allow_network_on_miss=True)
+        except Exception:
+            self.log_exception("failed to prewarm wishlist app details")
 
     def ensure_startup_initialized(self):
         with self.state_lock:
@@ -271,6 +325,7 @@ class SteamPlugin(
                 return
             self._initialize_runtime_state()
             self.configure_logger()
+            self.normalize_settings_on_startup()
             self._initialize_steam_state()
             self.startup_initialized = True
             if not self.background_tasks_started:

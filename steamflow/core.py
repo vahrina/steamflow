@@ -5,6 +5,7 @@ import threading
 import time
 import traceback
 from ctypes import wintypes
+from pathlib import Path
 
 from . import util_currency, util_steam_date
 
@@ -45,6 +46,9 @@ class SteamPluginCoreMixin:
 
     def add_result(self, result):
         action = result.get("JsonRPCAction", {})
+        kwargs = {}
+        if "AutoCompleteText" in result:
+            kwargs["auto_complete_text"] = result["AutoCompleteText"]
         self.add_item(
             title=result["Title"],
             subtitle=result.get("SubTitle", ""),
@@ -54,6 +58,7 @@ class SteamPluginCoreMixin:
             context=result.get("ContextData"),
             score=result.get("Score", 0),
             dont_hide=action.get("dontHideAfterAction", False),
+            **kwargs,
         )
 
     def build_action(self, method, *parameters):
@@ -91,7 +96,7 @@ class SteamPluginCoreMixin:
             "dontHideAfterAction": bool(keep_open),
         }
 
-    def build_result(self, title, subtitle, icon_path=None, action=None, context_data=None, **extra_fields):
+    def build_result(self, title, subtitle, icon_path=None, action=None, context_data=None, auto_complete_text=None, **extra_fields):
         result = {
             "Title": title,
             "SubTitle": subtitle,
@@ -101,6 +106,8 @@ class SteamPluginCoreMixin:
             result["ContextData"] = context_data
         if action is not None:
             result["JsonRPCAction"] = action
+        if auto_complete_text is not None:
+            result["AutoCompleteText"] = auto_complete_text
         result.update(extra_fields)
         return result
 
@@ -135,12 +142,52 @@ class SteamPluginCoreMixin:
         return data
 
     def get_setting_bool(self, name, default):
-        value = self.settings.get(name, default)
+        """Read checkbox/boolean settings from Flow. Handles bool, int, and string forms."""
+        if name not in self.settings:
+            return bool(default)
+        value = self.settings.get(name)
         if isinstance(value, bool):
             return value
+        if isinstance(value, (int, float)):
+            return value != 0
         if isinstance(value, str):
-            return value.strip().lower() in {"1", "true", "yes", "on"}
+            normalized = value.strip().lower()
+            if normalized in {"", "none", "null"}:
+                return bool(default)
+            if normalized in {"0", "false", "no", "off", "n"}:
+                return False
+            if normalized in {"1", "true", "yes", "on", "y"}:
+                return True
+            return bool(value)
         return bool(value)
+
+    def get_setting_int(self, name, default, min_val=None, max_val=None):
+        raw = self.settings.get(name, default)
+        try:
+            value = int(str(raw).strip())
+        except (TypeError, ValueError):
+            value = default
+        if min_val is not None:
+            value = max(min_val, value)
+        if max_val is not None:
+            value = min(max_val, value)
+        return value
+
+    def normalize_settings_on_startup(self):
+        int_settings = [
+            ("max_local_results", self.MAX_QUERY_RESULTS, 1, 20),
+            ("max_library_results", self.MAX_EMPTY_QUERY_RESULTS, 10, 200),
+            ("max_wishlist_results", self.MAX_WISHLIST_RESULTS, 5, 50),
+        ]
+        for name, default, min_val, max_val in int_settings:
+            try:
+                raw = self.settings.get(name)
+                if raw is not None:
+                    clamped = max(min_val, min(max_val, int(str(raw).strip())))
+                    if str(clamped) != str(raw):
+                        self.settings[name] = str(clamped)
+            except (TypeError, ValueError):
+                self.settings[name] = str(default)
 
     def get_blacklisted_app_ids(self):
         raw_value = self.settings.get("blacklisted_app_ids", ",".join(sorted(self.DEFAULT_BLACKLISTED_APP_IDS)))
@@ -185,14 +232,62 @@ class SteamPluginCoreMixin:
     def should_show_achievements(self):
         return self.get_setting_bool("show_achievements", True)
 
+    def should_show_help_api(self):
+        return self.get_setting_bool("show_help_api", True)
+
+    def should_show_help_switch(self):
+        return self.get_setting_bool("show_help_switch", True)
+
+    def should_show_help_status(self):
+        return self.get_setting_bool("show_help_status", True)
+
+    def should_show_help_wishlist(self):
+        return self.get_setting_bool("show_help_wishlist", True)
+
+    def should_show_help_settings(self):
+        return self.get_setting_bool("show_help_settings", True)
+
+    def should_show_help_restart(self):
+        return self.get_setting_bool("show_help_restart", True)
+
+    def should_show_help_exit(self):
+        return self.get_setting_bool("show_help_exit", True)
+
+    def should_show_help_clear(self):
+        return self.get_setting_bool("show_help_clear", True)
+
+    def get_settings_tree_file_path(self):
+        base = Path(getattr(self, "plugin_dir", Path(__file__).resolve().parent.parent))
+        raw = self.settings.get("settings_tree_file", "")
+        trimmed = str(raw or "").strip()
+        if not trimmed:
+            return (base / "tree.md").resolve()
+        candidate = Path(trimmed)
+        if not candidate.is_absolute():
+            candidate = base / candidate
+        return candidate.resolve()
+
+    def get_settings_tree_opener_exe(self):
+        raw = self.settings.get("settings_tree_opener_exe", "")
+        return str(raw or "").strip()
+
     def should_offer_refund_shortcut(self):
-        return True
+        return self.get_setting_bool("show_refund_shortcut", True)
 
     def should_log_performance(self):
         return self.get_setting_bool("enable_perf_logging", False)
 
     def should_detect_owned_games(self):
         return self.get_setting_bool("detect_owned_games", True)
+
+    def get_max_local_results(self):
+        return self.get_setting_int("max_local_results", self.MAX_QUERY_RESULTS, min_val=1, max_val=20)
+
+    def get_max_empty_query_results(self):
+        return self.get_setting_int("max_library_results", self.MAX_EMPTY_QUERY_RESULTS, min_val=10, max_val=200)
+
+    def get_max_wishlist_results(self):
+        return self.get_setting_int("max_wishlist_results", self.MAX_WISHLIST_RESULTS, min_val=5, max_val=50)
 
     def normalize_steam_web_api_key(self, value):
         normalized = str(value or "").strip()
@@ -384,31 +479,28 @@ class SteamPluginCoreMixin:
             last_sync = self.owned_games_last_sync
 
         if not self.has_owned_api_key():
-            return "Steam API Not Configured", "Save a Steam Web API key from the clipboard to enable Steam account features"
+            return "api not configured", "save a web api key from clipboard"
 
-        account_label = persona_name or account_name or "Steam account"
+        account_label = persona_name or account_name or "account"
         active_account_label = (
             active_user_details.get("persona_name")
             or active_user_details.get("account_name")
-            or "Steam account"
+            or "account"
         )
         if active_steamid64 and bound_steamid64 and active_steamid64 != bound_steamid64:
             return (
-                "Steam API Bound to Another Account",
-                f"Saved for {account_label}. Active account is {active_account_label}",
+                "api bound to another account",
+                f"saved for {account_label} | active is {active_account_label}",
             )
 
         if last_sync:
             age_minutes = max(0, int((time.time() - last_sync) / 60))
             return (
-                "Steam API Connected",
-                f"Bound to {account_label}, last sync {util_steam_date.format_relative_minutes_ago(age_minutes)}",
+                "connected",
+                f"{account_label} | last sync {util_steam_date.format_relative_minutes_ago(age_minutes)}",
             )
 
-        return (
-            "Steam API Connected",
-            f"Bound to {account_label}, waiting for first sync",
-        )
+        return ("connected", f"{account_label} | waiting for first sync")
 
     def update_player_count_cache(self, app_id, player_count):
         if player_count is None:

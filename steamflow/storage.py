@@ -93,13 +93,13 @@ class SteamPluginStorageMixin:
                 "owned_game_playtimes": dict(self.owned_game_playtimes),
             }
 
-        self._write_json_file(self.owned_games_cache_file, cache_data, "Failed to save owned games cache")
+        self._write_json_file(self.owned_games_cache_file, cache_data, "failed to save owned games cache")
 
     def load_owned_api_key_metadata(self):
         if not self.owned_api_key_meta_file.exists():
             return
 
-        metadata = self._read_json_file(self.owned_api_key_meta_file, "Failed to load Steam API key metadata")
+        metadata = self._read_json_file(self.owned_api_key_meta_file, "failed to load api key metadata")
         if not isinstance(metadata, dict):
             return
 
@@ -120,7 +120,7 @@ class SteamPluginStorageMixin:
                 "saved_at": int(time.time()),
             }
 
-        self._write_json_file(self.owned_api_key_meta_file, metadata, "Failed to save Steam API key metadata", indent=2)
+        self._write_json_file(self.owned_api_key_meta_file, metadata, "failed to save api key metadata", indent=2)
 
     def load_wishlist_cache(self):
         if not self.wishlist_cache_file.exists():
@@ -147,7 +147,7 @@ class SteamPluginStorageMixin:
                 "items": list(self.wishlist_items),
             }
 
-        self._write_json_file(self.wishlist_cache_file, cache_data, "Failed to save wishlist cache")
+        self._write_json_file(self.wishlist_cache_file, cache_data, "failed to save wishlist cache")
 
     def save_metric_caches(self, force=False):
         with self.state_lock:
@@ -173,23 +173,83 @@ class SteamPluginStorageMixin:
             return "us"
 
         if self.country_cache_file.exists():
-            cache_data = self._read_json_file(self.country_cache_file, "Failed to read country cache")
+            cache_data = self._read_json_file(self.country_cache_file, "failed to read country cache")
             if isinstance(cache_data, dict):
                 cache_time = cache_data.get("timestamp", 0)
                 if time.time() - cache_time < 7 * 24 * 60 * 60:
                     return util_currency.normalize_country_code(cache_data.get("country_code"))
 
-        cc = self._fetch_country_code(timeout=1.5)
-        if cc:
-            self._save_country_code_cache(cc)
-            return cc
-
         threading.Thread(target=self._update_country_code_async, daemon=True).start()
         return "us"
+
+    def load_installed_games_cache(self):
+        if not self.installed_games_cache_file.exists():
+            return False
+
+        cache_data = self._read_json_file(self.installed_games_cache_file, "failed to load installed games cache")
+        if not isinstance(cache_data, dict):
+            return False
+
+        installed_games = cache_data.get("installed_games", {})
+        installed_game_paths = cache_data.get("installed_game_paths", {})
+        installed_game_statuses = cache_data.get("installed_game_statuses", {})
+
+        if not isinstance(installed_games, dict) or not installed_games:
+            return False
+
+        with self.state_lock:
+            self.installed_games = installed_games
+            self.installed_game_paths = installed_game_paths if isinstance(installed_game_paths, dict) else {}
+            self.installed_game_statuses = installed_game_statuses if isinstance(installed_game_statuses, dict) else {}
+            self.last_update = float(cache_data.get("saved_at", 0) or 0)
+        return True
+
+    def save_installed_games_cache(self):
+        with self.state_lock:
+            cache_data = {
+                "saved_at": time.time(),
+                "installed_games": dict(self.installed_games),
+                "installed_game_paths": dict(self.installed_game_paths),
+                "installed_game_statuses": dict(self.installed_game_statuses),
+            }
+        self._write_json_file(self.installed_games_cache_file, cache_data, "failed to save installed games cache")
 
     def _save_country_code_cache(self, cc):
         self._write_json_file(
             self.country_cache_file,
             {"country_code": cc, "timestamp": time.time()},
-            "Failed to save country code cache",
+            "failed to save country code cache",
         )
+
+    def reset_steamflow_runtime_caches_in_memory(self):
+        with self.state_lock:
+            self.wishlist_items = []
+            self.wishlist_last_attempt = 0
+            self.wishlist_last_sync = 0
+            self.wishlist_steamid64 = None
+            self.wishlist_cache_loaded = True
+            self.owned_app_ids = set()
+            self.owned_game_playtimes = {}
+            self.owned_games_last_attempt = 0
+            self.owned_games_last_sync = 0
+            self.owned_games_public_profile = None
+            self.owned_games_steamid64 = None
+            self.owned_games_cache_loaded = True
+            self.player_count_cache = {}
+            self.review_score_cache = {}
+            self.achievement_schema_cache = {}
+            self.achievement_progress_cache = {}
+            self.app_details_cache = {}
+            self.metric_cache_dirty = False
+            self.search_cache = {}
+            self.installed_games = {}
+            self.installed_game_paths = {}
+            self.installed_game_statuses = {}
+            self.last_update = 0
+            if hasattr(self, "pending_player_count_refresh"):
+                self.pending_player_count_refresh = set()
+            if hasattr(self, "pending_review_score_refresh"):
+                self.pending_review_score_refresh = set()
+            if hasattr(self, "pending_app_details_refresh"):
+                self.pending_app_details_refresh = set()
+        self.country_code = "us"

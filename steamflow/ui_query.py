@@ -10,7 +10,7 @@ class SteamPluginUIQueryMixin:
             if search_lower in name.lower():
                 matches.append((app_id, name))
         matches.sort(key=lambda item: (item[1].lower().find(search_lower), len(item[1])))
-        return matches[: self.MAX_QUERY_RESULTS]
+        return matches[: self.get_max_local_results()]
 
     def get_empty_query_local_games(self):
         games = self.get_installed_games_items()
@@ -23,7 +23,7 @@ class SteamPluginUIQueryMixin:
             )
         else:
             games.sort(key=lambda item: item[1].lower())
-        return games[: self.MAX_EMPTY_QUERY_RESULTS]
+        return games[: self.get_max_empty_query_results()]
 
     def process_local_results(self, local_matches, include_player_count=False):
         if not local_matches:
@@ -32,7 +32,7 @@ class SteamPluginUIQueryMixin:
         if not include_player_count:
             return [self.build_local_result(app_id, name) for app_id, name in local_matches]
 
-        with ThreadPoolExecutor(max_workers=min(len(local_matches), self.MAX_QUERY_RESULTS)) as executor:
+        with ThreadPoolExecutor(max_workers=min(len(local_matches), self.get_max_local_results())) as executor:
             future_to_index = {}
             if self.should_show_player_count():
                 future_to_index = {
@@ -86,13 +86,39 @@ class SteamPluginUIQueryMixin:
 
         if self.is_switch_account_query(search_term):
             self.ensure_startup_initialized()
-            for result in self.build_switch_account_results():
+            for result in self.build_switch_account_results(self.get_switch_query_text(search_term)):
+                self.add_result(result)
+            return
+
+        if self.is_exit_query(search_term):
+            self.ensure_startup_initialized()
+            for result in self.build_exit_results():
+                self.add_result(result)
+            return
+
+        if self.is_restart_query(search_term):
+            self.ensure_startup_initialized()
+            for result in self.build_restart_results():
+                self.add_result(result)
+            return
+
+        if self.is_clear_query(search_term):
+            self.ensure_startup_initialized()
+            for result in self.build_clear_results(self.get_clear_query_text(search_term) or ""):
+                self.add_result(result)
+            return
+
+        if self.is_settings_query(search_term):
+            self.ensure_startup_initialized()
+            for result in self.build_settings_results(self.get_settings_query_text(search_term)):
                 self.add_result(result)
             return
 
         if self.is_status_query(search_term):
             self.ensure_startup_initialized()
-            for result in self.build_status_results():
+            for result in self.build_status_results(
+                self.get_status_query_text(search_term),
+            ):
                 self.add_result(result)
             return
 
@@ -103,6 +129,7 @@ class SteamPluginUIQueryMixin:
             return
 
         self.ensure_startup_initialized()
+        active_steam = self.get_active_steam_user_steamid64()
         query_start_time = time.perf_counter()
         timings = []
 
@@ -120,47 +147,73 @@ class SteamPluginUIQueryMixin:
 
         if not search_term:
             results = [self.build_launch_steam_result()]
-            stage_start_time = time.perf_counter()
-            games_to_show = self.get_empty_query_local_games()
-            self.mark_timing(timings, "collect_empty_local_games", stage_start_time)
+            active_steam = self.get_active_steam_user_steamid64()
+            if active_steam:
+                stage_start_time = time.perf_counter()
+                games_to_show = self.get_empty_query_local_games()
+                self.mark_timing(timings, "collect_empty_local_games", stage_start_time)
 
-            stage_start_time = time.perf_counter()
-            results.extend(self.process_local_results(games_to_show, include_player_count=False))
-            self.mark_timing(timings, "process_empty_local_results", stage_start_time)
-            if len(results) == 1:
-                results.append(self.build_empty_state_result())
+                stage_start_time = time.perf_counter()
+                results.extend(self.process_local_results(games_to_show, include_player_count=False))
+                self.mark_timing(timings, "process_empty_local_results", stage_start_time)
+                if len(results) == 1:
+                    results.append(self.build_empty_state_result())
+            else:
+                if len(results) == 1:
+                    results.append(
+                        self.build_result(
+                            title="library hidden until signed in",
+                            subtitle="",
+                            icon_path=self.DEFAULT_ICON,
+                            Score=5000,
+                        )
+                    )
+            if not self.has_owned_api_key():
+                results.append(self.build_api_setup_hint_result())
         else:
-            stage_start_time = time.perf_counter()
-            local_matches = self.collect_local_matches(search_term)
-            self.mark_timing(timings, "collect_local_matches", stage_start_time)
+            if not active_steam:
+                results = [
+                    self.build_result(
+                        title="not signed in",
+                        subtitle="sign into steam to search games",
+                        icon_path=self.DEFAULT_ICON,
+                        Score=9000,
+                    )
+                ]
+                if not self.has_owned_api_key():
+                    results.append(self.build_api_setup_hint_result())
+            else:
+                stage_start_time = time.perf_counter()
+                local_matches = self.collect_local_matches(search_term)
+                self.mark_timing(timings, "collect_local_matches", stage_start_time)
 
-            stage_start_time = time.perf_counter()
-            local_results = self.process_local_results(local_matches, include_player_count=True)
-            self.mark_timing(timings, "process_local_results", stage_start_time)
+                stage_start_time = time.perf_counter()
+                local_results = self.process_local_results(local_matches, include_player_count=True)
+                self.mark_timing(timings, "process_local_results", stage_start_time)
 
-            stage_start_time = time.perf_counter()
-            local_app_ids = {str(app_id) for app_id, _ in local_matches}
-            self.mark_timing(timings, "build_local_app_ids", stage_start_time)
+                stage_start_time = time.perf_counter()
+                local_app_ids = {str(app_id) for app_id, _ in local_matches}
+                self.mark_timing(timings, "build_local_app_ids", stage_start_time)
 
-            stage_start_time = time.perf_counter()
-            search_result = self.search_steam_api(search_term)
-            self.mark_timing(timings, "search_steam_api", stage_start_time)
+                stage_start_time = time.perf_counter()
+                search_result = self.search_steam_api(search_term)
+                self.mark_timing(timings, "search_steam_api", stage_start_time)
 
-            stage_start_time = time.perf_counter()
-            store_results = self.process_store_results(
-                search_result["games"],
-                skipped_app_ids=local_app_ids,
-            )
-            self.mark_timing(timings, "process_store_results", stage_start_time)
+                stage_start_time = time.perf_counter()
+                store_results = self.process_store_results(
+                    search_result["games"],
+                    skipped_app_ids=local_app_ids,
+                )
+                self.mark_timing(timings, "process_store_results", stage_start_time)
 
-            stage_start_time = time.perf_counter()
-            results = self.merge_search_results(local_matches, local_results, store_results)
-            self.mark_timing(timings, "merge_search_results", stage_start_time)
-            if not results:
-                if search_result["error"]:
-                    results.append(self.build_search_error_result(search_term, search_result["error"]))
-                else:
-                    results.append(self.build_empty_state_result(search_term))
+                stage_start_time = time.perf_counter()
+                results = self.merge_search_results(local_matches, local_results, store_results)
+                self.mark_timing(timings, "merge_search_results", stage_start_time)
+                if not results:
+                    if search_result["error"]:
+                        results.append(self.build_search_error_result(search_term, search_result["error"]))
+                    else:
+                        results.append(self.build_empty_state_result(search_term))
 
         stage_start_time = time.perf_counter()
         for result in results:

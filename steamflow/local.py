@@ -16,18 +16,19 @@ except ImportError:
 
 class SteamPluginLocalMixin:
     LOCAL_PERSONA_STATE_LABELS = {
-        0: "Offline",
-        1: "Online",
-        2: "Busy",
-        3: "Away",
-        4: "Snooze",
-        5: "Looking to trade",
-        6: "Looking to play",
-        7: "Invisible",
+        0: "offline",
+        1: "online",
+        2: "busy",
+        3: "away",
+        4: "snooze",
+        5: "looking to trade",
+        6: "looking to play",
+        7: "invisible",
     }
     LOCAL_PERSONA_STATE_PROTOCOLS = {
         0: "offline",
         1: "online",
+        3: "away",
         7: "invisible",
     }
 
@@ -180,11 +181,11 @@ class SteamPluginLocalMixin:
     def get_local_game_account_notice(self, app_id):
         ownership_state = self.get_active_account_ownership_state(app_id)
         if ownership_state == "not_owned" and self.should_show_cross_account_install_notice(app_id):
-            return " | Installed via another account"
+            return " | installed via another account"
 
         if ownership_state == "unknown" and self.has_multiple_known_steam_accounts():
             if not self.has_current_account_local_data(app_id):
-                return " | No current-account data"
+                return " | no current account data"
 
         return ""
 
@@ -329,6 +330,12 @@ class SteamPluginLocalMixin:
         if not active_user_id:
             return None
 
+        with self.state_lock:
+            pending_state = self._pending_persona_state
+            pending_expiry = self._pending_persona_state_expiry
+        if pending_state is not None and time.time() < pending_expiry:
+            return pending_state
+
         try:
             localconfig_text = self.load_localconfig_text()
             if not localconfig_text:
@@ -337,9 +344,14 @@ class SteamPluginLocalMixin:
             match = re.search(pattern, localconfig_text)
             if not match:
                 return None
-            return int(match.group(1))
+            state = int(match.group(1))
+            with self.state_lock:
+                if self._pending_persona_state == state:
+                    self._pending_persona_state = None
+                    self._pending_persona_state_expiry = 0.0
+            return state
         except Exception:
-            self.log_exception("Failed to load active Steam friends status from localconfig.vdf")
+            self.log_exception("failed to load active friends status from localconfig.vdf")
             return None
 
     def get_hidden_collections_path(self):
@@ -420,7 +432,7 @@ class SteamPluginLocalMixin:
                 self.hidden_games_cache_loaded = True
             return set(hidden_app_ids)
         except Exception:
-            self.log_exception("Failed to load hidden Steam games")
+            self.log_exception("failed to load hidden games")
             return set()
 
     def get_all_steam_library_paths(self):
@@ -464,7 +476,7 @@ class SteamPluginLocalMixin:
                     self.library_folders_cache_mtime = current_mtime
                     self.library_paths_cache = list(library_paths)
         except Exception:
-            self.log_exception("Failed to load Steam library folders")
+            self.log_exception("failed to load library folders")
         return library_paths
 
     def get_appmanifest_signature(self, manifest_path):
@@ -518,7 +530,7 @@ class SteamPluginLocalMixin:
             }
             return self.store_appmanifest_cache(manifest_path, signature, manifest_data)
         except Exception:
-            self.log_exception(f"Failed to parse manifest: {manifest_path}")
+            self.log_exception(f"failed to parse manifest: {manifest_path}")
             return None
 
     def cleanup_appmanifest_cache(self, manifest_keys_in_use):
@@ -668,9 +680,9 @@ class SteamPluginLocalMixin:
                             if install_dir:
                                 installed_game_paths[app_id] = str(steamapps_path / "common" / install_dir)
                         except Exception:
-                            self.log_exception(f"Failed to process manifest: {acf_file}")
+                            self.log_exception(f"failed to process manifest: {acf_file}")
                 except Exception:
-                    self.log_exception(f"Failed to scan Steam library: {steamapps_path}")
+                    self.log_exception(f"failed to scan library: {steamapps_path}")
 
             self.cleanup_appmanifest_cache(manifest_keys_in_use)
             self.cleanup_local_achievement_cache(installed_games.keys())
@@ -684,7 +696,10 @@ class SteamPluginLocalMixin:
                     self.playtime_minutes = playtime_minutes
                     self.last_played_timestamps = last_played_timestamps
                     self.last_update = time.time()
+                    self._icon_path_cache = {}
                 self.installed_games_update_in_progress = False
+            if update_completed:
+                self.save_installed_games_cache()
 
     def update_installed_games(self, force=False, allow_background=True):
         if not force and self.has_installed_games_snapshot() and self.active_local_user_state_is_stale():
@@ -775,7 +790,7 @@ class SteamPluginLocalMixin:
         try:
             return schema_path.read_bytes().count(b"icon_gray")
         except Exception:
-            self.log_exception(f"Failed to load achievement schema: {schema_path}")
+            self.log_exception(f"failed to load achievement schema: {schema_path}")
             return 0
 
     def read_local_unlocked_achievement_count(self, user_stats_path):
@@ -793,7 +808,7 @@ class SteamPluginLocalMixin:
                     unlocked_count += (bitmask & 0xFFFFFFFF).bit_count()
             return unlocked_count
         except Exception:
-            self.log_exception(f"Failed to load local user stats: {user_stats_path}")
+            self.log_exception(f"failed to load local user stats: {user_stats_path}")
             return 0
 
     def parse_binary_keyvalues(self, data):
@@ -817,7 +832,7 @@ class SteamPluginLocalMixin:
             elif value_type == self.BinaryKeyValuesReader.TYPE_UINT64:
                 parsed[key] = reader.read_uint64()
             else:
-                raise ValueError(f"Unsupported KeyValues type: {value_type}")
+                raise ValueError(f"unsupported KeyValues type: {value_type}")
         return parsed
 
     class BinaryKeyValuesReader:
@@ -917,31 +932,42 @@ class SteamPluginLocalMixin:
                 self.localconfig_mtime = current_mtime
             return playtimes, last_played_timestamps
         except Exception:
-            self.log_exception("Failed to load playtime data from localconfig.vdf")
+            self.log_exception("failed to load playtime data from localconfig.vdf")
             return {}, {}
 
     def get_local_game_icon(self, app_id):
         if not self.steam_icon_cache or not self.steam_icon_cache.exists():
             return self.DEFAULT_ICON
 
-        icon_cache_path = self.steam_icon_cache / str(app_id)
-        if not icon_cache_path.is_dir():
-            return self.DEFAULT_ICON
+        app_id_str = str(app_id)
+        with self.state_lock:
+            cached_icon = self._icon_path_cache.get(app_id_str)
+        if cached_icon is not None:
+            return cached_icon
 
-        try:
-            files = [file_path for file_path in icon_cache_path.iterdir() if file_path.suffix.lower() == ".jpg" and file_path.is_file()]
-            filtered_files = [
-                file_path
-                for file_path in files
-                if not (
-                    file_path.name.lower().startswith("header")
-                    or file_path.name.lower().startswith("library")
-                    or file_path.name.lower().startswith("logo")
-                )
-            ]
-            if filtered_files:
-                return str(filtered_files[0])
-        except Exception:
-            self.log_exception(f"Failed to resolve local icon for app {app_id}")
+        icon_cache_path = self.steam_icon_cache / app_id_str
+        result = self.DEFAULT_ICON
+        if icon_cache_path.is_dir():
+            try:
+                files = [
+                    file_path
+                    for file_path in icon_cache_path.iterdir()
+                    if file_path.suffix.lower() == ".jpg" and file_path.is_file()
+                ]
+                filtered_files = [
+                    file_path
+                    for file_path in files
+                    if not (
+                        file_path.name.lower().startswith("header")
+                        or file_path.name.lower().startswith("library")
+                        or file_path.name.lower().startswith("logo")
+                    )
+                ]
+                if filtered_files:
+                    result = str(filtered_files[0])
+            except Exception:
+                self.log_exception(f"failed to resolve local icon ({app_id})")
 
-        return self.DEFAULT_ICON
+        with self.state_lock:
+            self._icon_path_cache[app_id_str] = result
+        return result

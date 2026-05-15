@@ -17,7 +17,7 @@ class SteamPluginProfileMixin:
                 cache_data = json.load(file_obj)
             return cache_data if isinstance(cache_data, dict) else {}
         except Exception:
-            self.log_exception("Failed to load active Steam profile cache")
+            self.log_exception("failed to load active profile cache")
             return {}
 
     def save_profile_cache(self, cache_data):
@@ -25,7 +25,7 @@ class SteamPluginProfileMixin:
             with open(self.profile_cache_file, "w", encoding="utf-8") as file_obj:
                 json.dump(cache_data, file_obj)
         except Exception:
-            self.log_exception("Failed to save active Steam profile cache")
+            self.log_exception("failed to save active profile cache")
 
     def ensure_active_profile_summary_loaded(self):
         with self.state_lock:
@@ -76,7 +76,7 @@ class SteamPluginProfileMixin:
                 "fetched_at": time.time(),
             }
         except Exception:
-            self.log_exception("Failed to fetch active Steam profile summary")
+            self.log_exception("failed to fetch active profile summary")
             return None
 
     def schedule_active_profile_summary_refresh(self, force=False):
@@ -151,13 +151,13 @@ class SteamPluginProfileMixin:
             return f"Playing {current_game}"
 
         status_labels = {
-            0: "Offline",
-            1: "Online",
-            2: "Busy",
-            3: "Away",
-            4: "Snooze",
-            5: "Looking to trade",
-            6: "Looking to play",
+            0: "offline",
+            1: "online",
+            2: "busy",
+            3: "away",
+            4: "snooze",
+            5: "looking to trade",
+            6: "looking to play",
         }
         try:
             return status_labels.get(int(summary.get("personastate", 0) or 0), "")
@@ -168,7 +168,7 @@ class SteamPluginProfileMixin:
         api_key = self.normalize_steam_web_api_key(api_key)
         steamid64 = str(steamid64 or "").strip()
         if not api_key or not steamid64:
-            raise ValueError("Missing Steam API credentials")
+            raise ValueError("missing api credentials")
 
         url = (
             "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/"
@@ -237,7 +237,7 @@ class SteamPluginProfileMixin:
                 cache_data = json.load(file_obj)
             return cache_data if isinstance(cache_data, dict) else {}
         except Exception:
-            self.log_exception("Failed to load avatar frame cache")
+            self.log_exception("failed to load avatar frame cache")
             return {}
 
     def save_avatar_frame_cache(self, cache_data):
@@ -245,7 +245,7 @@ class SteamPluginProfileMixin:
             with open(self.avatar_frame_cache_file, "w", encoding="utf-8") as file_obj:
                 json.dump(cache_data, file_obj)
         except Exception:
-            self.log_exception("Failed to save avatar frame cache")
+            self.log_exception("failed to save avatar frame cache")
 
     def get_active_steam_avatar_frame_path(self):
         if not self.has_owned_api_key() or not self.is_owned_api_key_bound_to_active_user():
@@ -322,7 +322,7 @@ class SteamPluginProfileMixin:
                 "name": frame_data.get("name") or frame_data.get("item_title"),
             }
         except Exception:
-            self.log_exception("Failed to fetch active Steam avatar frame")
+            self.log_exception("failed to fetch active avatar frame")
             return None
 
     def download_avatar_frame_image(self, image_url, save_path):
@@ -332,7 +332,7 @@ class SteamPluginProfileMixin:
                 out_file.write(response.data)
             return True
         except Exception:
-            self.log_exception(f"Failed to download avatar frame: {image_url}")
+            self.log_exception(f"failed to download avatar frame: {image_url}")
             return False
 
     def create_framed_avatar_icon(self, avatar_path, frame_path, output_path):
@@ -348,7 +348,7 @@ class SteamPluginProfileMixin:
                 composed.save(output_path, format="PNG")
             return output_path.exists()
         except Exception:
-            self.log_exception(f"Failed to compose framed avatar icon from {avatar_path}")
+            self.log_exception(f"failed to compose framed avatar icon from {avatar_path}")
             return False
 
     def owned_games_cache_is_fresh(self):
@@ -414,7 +414,7 @@ class SteamPluginProfileMixin:
                     json.JSONDecodeError,
                 ),
             ):
-                self.log_exception("Failed to refresh owned Steam games")
+                self.log_exception("failed to refresh owned games")
 
         if fetch_succeeded:
             with self.state_lock:

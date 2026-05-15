@@ -24,6 +24,7 @@ from steamflow.ui_commands import SteamPluginUICommandsMixin
 
 
 class UICommandsHarness(SteamPluginUICommandsMixin):
+    DEFAULT_ICON = "default-icon"
     OWNED_ICON = "owned-icon"
     BROWSER_ICON = "browser-icon"
     CLIPBOARD_ICON = "clipboard-icon"
@@ -34,6 +35,12 @@ class UICommandsHarness(SteamPluginUICommandsMixin):
     OFFLINE_ICON = "offline-icon"
     INVISIBLE_ICON = "invisible-icon"
     WARNING_ICON = "warning-icon"
+    SETTINGS_ICON = "settings-icon"
+    PROPERTIES_ICON = "properties-icon"
+    SCREENSHOT_ICON = "screenshot-icon"
+    GUIDES_ICON = "guides-icon"
+    LOCATION_ICON = "location-icon"
+    DOWNLOAD_ICON = "download-icon"
 
     def __init__(self):
         self.messages = []
@@ -120,13 +127,15 @@ class UICommandsHarness(SteamPluginUICommandsMixin):
             "dontHideAfterAction": bool(keep_open),
         }
 
-    def build_result(self, title, subtitle, icon_path=None, action=None, context_data=None, **extra_fields):
+    def build_result(self, title, subtitle, icon_path=None, action=None, context_data=None, auto_complete_text=None, **extra_fields):
         result = {
             "Title": title,
             "SubTitle": subtitle,
             "IcoPath": icon_path,
             "action": action,
         }
+        if auto_complete_text is not None:
+            result["AutoCompleteText"] = auto_complete_text
         result.update(extra_fields)
         return result
 
@@ -152,6 +161,34 @@ class UICommandsHarness(SteamPluginUICommandsMixin):
 
 
 class UICommandsTests(unittest.TestCase):
+    def test_settings_subsequence_score_matches_typos(self):
+        self.assertIsNotNone(SteamPluginUICommandsMixin._settings_subsequence_score("frnds", "general friends community"))
+        self.assertIsNone(SteamPluginUICommandsMixin._settings_subsequence_score("xyz", "friends"))
+
+    def test_settings_category_filters_by_remainder(self):
+        harness = UICommandsHarness()
+        results = harness.build_settings_results("general friends")
+        self.assertEqual([r["Title"] for r in results], ["friends"])
+
+    def test_settings_profile_inventory_one_row(self):
+        harness = UICommandsHarness()
+        results = harness.build_settings_results("profile inventory")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["Title"], "inventory")
+
+    def test_settings_fzf_returns_friends(self):
+        harness = UICommandsHarness()
+        results = harness.build_settings_results("fzf frnds")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["Title"], "friends")
+
+    def test_settings_prefix_gen_drills_general(self):
+        harness = UICommandsHarness()
+        results = harness.build_settings_results("gen")
+        titles = [r["Title"] for r in results]
+        self.assertIn("friends", titles)
+        self.assertIn("store", titles)
+
     def test_help_query_alias_matches_question_mark(self):
         harness = UICommandsHarness()
 

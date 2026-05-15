@@ -15,6 +15,7 @@ except ImportError:
 
 
 class SteamPluginAccountsMixin:
+    LOGINUSERS_FILE = "loginusers.vdf"
     STEAM_PROCESS_IMAGE_NAMES = (
         "steam.exe",
         "steamwebhelper.exe",
@@ -83,13 +84,13 @@ class SteamPluginAccountsMixin:
                 continue
 
         if parse_failed:
-            self.log_exception("Failed to load Steam loginusers.vdf")
+            self.log_exception(f"failed to load {self.LOGINUSERS_FILE}")
         return {}
 
     def save_loginusers_data(self, data):
         loginusers_path = self.get_loginusers_path()
         if not loginusers_path:
-            raise FileNotFoundError("Steam loginusers.vdf not found")
+            raise FileNotFoundError(f"{self.LOGINUSERS_FILE} not found")
 
         backup_path = self.get_loginusers_backup_path()
         temp_path = loginusers_path.with_name(f"{loginusers_path.name}.tmp")
@@ -117,12 +118,12 @@ class SteamPluginAccountsMixin:
 
     def get_steam_account_label(self, account_data):
         if not isinstance(account_data, dict):
-            return "Steam account"
+            return "steam account"
         return (
             str(account_data.get("persona_name", "") or "").strip()
             or str(account_data.get("account_name", "") or "").strip()
             or str(account_data.get("steamid64", "") or "").strip()
-            or "Steam account"
+            or "steam account"
         )
 
     def get_known_steam_accounts(self):
@@ -177,7 +178,7 @@ class SteamPluginAccountsMixin:
         show_msg = getattr(self, "show_msg", None)
         if callable(show_msg):
             try:
-                show_msg("Steam Switch Failed", str(message or ""), self.DEFAULT_ICON)
+                show_msg("switch failed", str(message or ""), self.DEFAULT_ICON)
             except Exception:
                 pass
 
@@ -244,7 +245,7 @@ class SteamPluginAccountsMixin:
             if self._is_windows_process_running(image_name)
         ]
         if remaining_processes:
-            raise RuntimeError(f"Steam processes still running: {', '.join(remaining_processes)}")
+            raise RuntimeError(f"steam processes still running: {', '.join(remaining_processes)}")
 
     def terminate_steam_client(self):
         if not self._is_windows_process_running("steam.exe"):
@@ -263,11 +264,11 @@ class SteamPluginAccountsMixin:
         if not self.steam_path:
             self.steam_path = self.get_steam_path()
         if not self.steam_path:
-            raise FileNotFoundError("Steam installation not found")
+            raise FileNotFoundError("steaminstallation not found")
 
         steam_exe = self.steam_path / "steam.exe"
         if not steam_exe.exists():
-            raise FileNotFoundError(f"Steam executable not found at {steam_exe}")
+            raise FileNotFoundError(f"steam executable not found at {steam_exe}")
 
         try:
             subprocess.Popen([str(steam_exe)], cwd=str(self.steam_path))
@@ -277,7 +278,7 @@ class SteamPluginAccountsMixin:
     def start_steam_switch_worker(self, steamid64):
         worker_script = self.plugin_dir / "steam_switch_worker.py"
         if not worker_script.exists():
-            raise FileNotFoundError(f"Steam switch worker not found at {worker_script}")
+            raise FileNotFoundError(f"switch worker not found at {worker_script}")
 
         startupinfo = None
         creationflags = 0
@@ -305,43 +306,43 @@ class SteamPluginAccountsMixin:
     def switch_steam_account(self, steamid64):
         target_steamid64 = str(steamid64 or "").strip()
         if not target_steamid64.isdigit():
-            message = "Invalid Steam account"
+            message = "invalid steam account"
             self.show_switch_error_message(message)
             return message
 
         if not self.steam_path:
             self.steam_path = self.get_steam_path()
         if not self.steam_path:
-            message = "Steam installation not found"
+            message = "steam installation not found"
             self.show_switch_error_message(message)
             return message
 
         target_account = self.get_steam_user_details(target_steamid64)
         if not target_account:
-            message = "Steam account not found in loginusers.vdf"
+            message = f"steam account not found in {self.LOGINUSERS_FILE}"
             self.show_switch_error_message(message)
             return message
 
         target_label = self.get_steam_account_label(target_account)
         if self.get_active_steam_user_steamid64() == target_steamid64:
-            return f"{target_label} is already the active Steam account"
+            return f"{target_label} is already the active steam account"
 
         try:
             self.start_steam_switch_worker(target_steamid64)
             schedule_refresh = getattr(self, "schedule_installed_games_refresh", None)
             if callable(schedule_refresh):
                 schedule_refresh(delay_seconds=5, reset_user_paths=True)
-            return f"Switching Steam account to {target_label}..."
+            return f"switching account to {target_label}..."
         except Exception:
-            self.log_exception(f"Failed to start Steam switch worker for {target_label}")
-            message = f"Failed to start Steam switch worker for {target_label}"
+            self.log_exception(f"failed to start switch worker for {target_label}")
+            message = f"failed to start switch worker for {target_label}"
             self.show_switch_error_message(message)
             return message
 
     def get_loginusers_path(self):
         if not self.steam_path:
             return None
-        path = self.steam_path / "config" / "loginusers.vdf"
+        path = self.steam_path / "config" / self.LOGINUSERS_FILE
         if path.exists():
             return path
         return None
@@ -358,7 +359,7 @@ class SteamPluginAccountsMixin:
                 "persona_name": user_data.get("PersonaName"),
             }
         except Exception:
-            self.log_exception("Failed to load Steam loginusers.vdf")
+            self.log_exception(f"failed to load {self.LOGINUSERS_FILE}")
             return {}
 
     def get_last_known_steam_user_id(self):
@@ -399,7 +400,7 @@ class SteamPluginAccountsMixin:
 
             return str(int(chosen_steamid64) - 76561197960265728)
         except Exception:
-            self.log_exception("Failed to resolve last known Steam user from loginusers.vdf")
+            self.log_exception(f"failed to resolve last known user from {self.LOGINUSERS_FILE}")
             return None
 
     def get_active_steam_user_id(self):
@@ -409,9 +410,10 @@ class SteamPluginAccountsMixin:
             active_user = str(active_user).strip()
             if active_user and active_user != "0":
                 return active_user
+            # at account picker / signed out: ActiveUser is 0 so do not treat loginusers MostRecent as active
+            return None
         except Exception:
-            pass
-        return self.get_last_known_steam_user_id()
+            return None
 
     def get_active_steam_user_steamid64(self):
         active_user_id = self.get_active_steam_user_id()

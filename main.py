@@ -12,21 +12,21 @@ if str(lib_path) not in sys.path:
 
 LIGHTWEIGHT_METHODS = {
     "context_menu",
-    "open_steam_refund_page",
     "open_steam",
+    "open_steam_refund_page",
     "open_steam_discussions_page",
     "open_steam_friends",
     "open_steam_guides_page",
     "open_steam_library_game_details",
     "open_my_steam_wishlist",
     "open_steam_settings",
-    "install_steam_game",
-    "uninstall_steam_game",
-    "open_local_files",
     "open_steam_game_properties_page",
     "open_steam_screenshots_page",
     "open_steam_store_page",
     "open_steamdb_page",
+    "install_steam_game",
+    "uninstall_steam_game",
+    "open_local_files",
 }
 
 
@@ -53,7 +53,11 @@ def get_plugin_class():
 
 
 if __name__ == "__main__":
-    plugin = get_plugin_class()()
-    run = getattr(plugin, "run", None)
-    if callable(run):
-        run()
+    Base = get_plugin_class()
+
+    class Plugin(Base):
+        def __del__(self):
+            pass
+
+    plugin = Plugin()
+    plugin.run()

@@ -11,9 +11,11 @@ from pathlib import Path
 
 
 plugindir = Path(__file__).parent.resolve()
-LOG_FILE = plugindir / "steam_wishlist_worker.log"
-LOCK_FILE = plugindir / "steam_wishlist_worker.lock"
-METRIC_CACHE_FILE = plugindir / "cache_metric.json"
+RUNTIME_DIR = plugindir / "var"
+RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+LOG_FILE = RUNTIME_DIR / "steam_wishlist_worker.log"
+LOCK_FILE = RUNTIME_DIR / "steam_wishlist_worker.lock"
+METRIC_CACHE_FILE = RUNTIME_DIR / "cache_metric.json"
 APP_DETAILS_CACHE_TTL_SECONDS = 30 * 24 * 60 * 60
 APP_DETAILS_FAILURE_CACHE_TTL_SECONDS = 6 * 60 * 60
 USER_AGENT = "Mozilla/5.0"

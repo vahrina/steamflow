@@ -238,7 +238,7 @@ class SteamPluginStoreMetricsMixin:
                 self.log_slow_call("get_achievement_schema_total", (time.perf_counter() - start_time) * 1000, f"app_id={app_id}")
                 return len(achievements)
         except Exception:
-            self.log_exception(f"Failed to fetch achievement schema for app {app_id}")
+            self.log_exception(f"failed to fetch achievement schema for app {app_id}")
 
         self.log_slow_call("get_achievement_schema_total", (time.perf_counter() - start_time) * 1000, f"app_id={app_id}")
         return None
@@ -263,7 +263,7 @@ class SteamPluginStoreMetricsMixin:
                 self.log_slow_call("get_player_achievement_progress", (time.perf_counter() - start_time) * 1000, f"app_id={app_id}")
                 return unlocked_count
         except Exception:
-            self.log_exception(f"Failed to fetch player achievements for app {app_id}")
+            self.log_exception(f"failed to fetch player achievements ({app_id})")
 
         self.log_slow_call("get_player_achievement_progress", (time.perf_counter() - start_time) * 1000, f"app_id={app_id}")
         return None
@@ -423,29 +423,49 @@ class SteamPluginStoreMetricsMixin:
             player_count = players_future.result() if players_future else None
             achievement_progress = achievements_future.result() if achievements_future else None
 
-        review_score_str = self.format_review_score(review_summary) if should_fetch_review else ""
+        coming_soon = bool(game_data.get("coming_soon"))
+        has_price = game_data.get("has_price") or game_data.get("is_free")
+
+        review_score_str = ""
+        if should_fetch_review and not coming_soon and has_price:
+            review_score_str = self.format_review_score(review_summary)
+
         player_count_str = self.format_player_count(player_count) if should_fetch_players else ""
-        owned_playtime_str = self.format_owned_playtime(self.get_owned_game_playtime_minutes(app_id)) if is_owned else ""
+        owned_playtime_str = ""
+        if is_owned and self.should_show_playtime():
+            owned_playtime_str = self.format_owned_playtime(self.get_owned_game_playtime_minutes(app_id))
         achievement_progress_str = self.format_store_achievement_progress(achievement_progress) if should_fetch_achievements else ""
 
-        price_str = self.format_store_price_or_availability(game_data, is_owned=is_owned)
-        release_date_str = (
-            self.format_release_date_text(game_data.get("release_date_text"))
-            if self.should_show_release_date_text(game_data)
-            else ""
-        )
-
-        ownership_suffix = " [Owned]" if is_owned else ""
-        subtitle_prefix = "Owned game, open in Steam library" if is_owned else "Open in Steam store"
-        action_method = "open_steam_library_game_details" if is_owned else "open_steam_store_page"
-        title_prefix = "\U0001F3AE" if is_owned else "\U0001F6D2"
+        # build subtitle per type
+        if is_owned:
+            # owned (may or may not be installed) — metrics only, no store prefix
+            subtitle = (
+                f"{owned_playtime_str}{achievement_progress_str}{player_count_str}"
+            ).lstrip(" |")
+            action_method = "open_steam_library_game_details"
+            title_marker = " ↓" if not self.get_install_path(app_id) else " ✔"
+            title_prefix = "\U0001F3AE"
+        else:
+            # unpurchased store result — price/date/reviews only
+            price_str = self.format_store_price_or_availability(game_data, is_owned=False)
+            release_date_str = (
+                self.format_release_date_text(game_data.get("release_date_text"))
+                if self.should_show_release_date_text(game_data)
+                else ""
+            )
+            if coming_soon:
+                subtitle = ("coming soon" + release_date_str).lstrip(" |")
+            else:
+                subtitle = (price_str + review_score_str).lstrip(" |")
+                if not subtitle:
+                    subtitle = release_date_str.lstrip(" |")
+            action_method = "open_steam_store_page"
+            title_marker = ""
+            title_prefix = "\U0001F6D2"
 
         return self.build_result(
-            title=f"{title_prefix} {name}{ownership_suffix}",
-            subtitle=(
-                f"{subtitle_prefix}{self.get_platform_suffix(game_data.get('platforms', {}))}"
-                f"{review_score_str}{player_count_str}{owned_playtime_str}{achievement_progress_str}{price_str}{release_date_str}"
-            ),
+            title=f"{title_prefix} {name}{title_marker}",
+            subtitle=subtitle,
             icon_path=icon_path,
             context_data=self.build_context_data(
                 app_id=app_id,
@@ -485,6 +505,6 @@ class SteamPluginStoreMetricsMixin:
                 try:
                     processed_results[future_to_index[future]] = future.result()
                 except Exception:
-                    self.log_exception("Failed to process Steam store result")
+                    self.log_exception("failed to process store result")
 
         return [result for result in processed_results if result]

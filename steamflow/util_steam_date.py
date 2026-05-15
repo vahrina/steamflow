@@ -2,18 +2,18 @@ from datetime import datetime
 
 
 MONTH_ABBREVIATIONS = (
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
+    "jan",
+    "feb",
+    "mar",
+    "apr",
+    "may",
+    "jun",
+    "jul",
+    "aug",
+    "sep",
+    "oct",
+    "nov",
+    "dec",
 )
 
 
@@ -29,9 +29,9 @@ def format_steam_last_played(unix_timestamp, now=None):
     delta_days = (today - played_date).days
 
     if delta_days == 0:
-        return "Today"
+        return "today"
     if delta_days == 1:
-        return "Yesterday"
+        return "yesterday"
     if 2 <= delta_days <= 7:
         return f"{delta_days} days ago"
 
@@ -70,9 +70,9 @@ def format_wishlisted_date(unix_timestamp, now=None):
     delta_days = (today - wishlisted_date).days
 
     if delta_days == 0:
-        return "Today"
+        return "today"
     if delta_days == 1:
-        return "Yesterday"
+        return "yesterday"
     if 2 <= delta_days <= 7:
         return f"{delta_days}d ago"
 

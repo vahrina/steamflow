@@ -8,17 +8,24 @@ from .menu import get_game_context_menu_entries, get_steam_client_context_menu_e
 class SteamPluginUIMixin:
     def get_launch_steam_subtitle(self):
         steamid64 = self.get_active_steam_user_steamid64()
+        if not steamid64:
+            return "not signed in"
         user_details = self.get_steam_user_details(steamid64)
         account_label = (
             user_details.get("persona_name")
             or user_details.get("account_name")
-            or "Steam user"
+            or "steam"
         )
-        subtitle = f"Open Steam client as {account_label}"
+        subtitle = str(account_label).lower()
         profile_status = self.get_active_profile_status()
         if profile_status:
-            subtitle += f" | {profile_status}"
+            subtitle += f" | {str(profile_status).lower()}"
         return subtitle
+
+    def get_launch_steam_result_subtitle(self):
+        if self.get_active_steam_user_steamid64():
+            return ""
+        return "open client or sign in · type ? for commands"
 
     def format_playtime(self, playtime_minutes):
         if playtime_minutes is None:
@@ -34,7 +41,7 @@ class SteamPluginUIMixin:
         played_on = util_steam_date.format_steam_last_played(last_played_timestamp)
         if not played_on:
             return ""
-        return f" | Last played: {played_on}"
+        return f" | last played: {played_on}"
 
     def format_achievement_progress(self, app_id):
         if not self.should_show_achievements():
@@ -60,38 +67,47 @@ class SteamPluginUIMixin:
     def build_empty_state_result(self, search_term=None):
         if search_term:
             return self.build_result(
-                title=f"No games found for '{search_term}'",
-                subtitle="Try a different search term",
+                title=f"no match for '{search_term}'",
+                subtitle="try different search",
             )
         return self.build_result(
-            title="SteamFlow",
-            subtitle="No installed games found. Type to search Steam store...",
+            title="steamflow",
+            subtitle="no installed games",
+        )
+
+    def build_api_setup_hint_result(self):
+        api_query = self.build_plugin_query("api")
+        return self.build_result(
+            title="set up api",
+            subtitle=f"'{api_query}' -> wishlist, owned detection, profile status",
+            icon_path=self.SETTINGS_ICON,
+            action=self.build_change_query_action(api_query),
+            Score=1,
         )
 
     def build_search_error_result(self, search_term, error_message):
         return self.build_result(
-            title=f"Search failed for '{search_term}'",
-            subtitle=error_message,
+            title=f"search failed: '{search_term}'",
+            subtitle=str(error_message).lower(),
         )
 
     def build_launch_steam_result(self):
+        extra = self.get_launch_steam_result_subtitle()
         return self.build_result(
-            title="Launch Steam",
-            subtitle=self.get_launch_steam_subtitle(),
+            title=self.get_launch_steam_subtitle() or "steam",
+            subtitle=extra,
             icon_path=self.get_active_steam_avatar_icon(),
             context_data={"menu": "steam_client", "name": "Steam"},
             action=self.build_action("open_steam"),
             Score=10000,
         )
 
-    def get_local_game_subtitle(self, app_id, status_label):
-        subtitle_by_status = {
-            "Updating": "Installed game, update in progress",
-            "Update Paused": "Installed game, update paused",
-            "Update Queued": "Installed game, update queued",
-            "Update Required": "Installed game, update required",
-        }
-        return subtitle_by_status.get(status_label, "Launch installed game")
+    UPDATE_STATUS_MARKERS = {
+        "Updating": " ⬇",
+        "Update Paused": " ⏸",
+        "Update Queued": " ⏳",
+        "Update Required": " ⚠",
+    }
 
     def should_prefetch_refund_state(self, app_id):
         playtime_minutes = self.get_playtime_minutes(app_id)
@@ -107,19 +123,35 @@ class SteamPluginUIMixin:
         refund_state=None,
     ):
         status_label = self.get_installed_game_status(app_id)
-        display_name = f"{name} [{status_label}]" if status_label else name
-        subtitle = self.get_local_game_subtitle(app_id, status_label)
+        title_marker = self.UPDATE_STATUS_MARKERS.get(status_label, " ▶")
+
+        # subtitle: metrics only, no "installed" prefix
+        subtitle_parts = []
         if self.should_show_playtime():
-            subtitle += self.format_playtime(self.get_playtime_minutes(app_id))
-        subtitle += self.format_achievement_progress(app_id)
+            pt = self.format_playtime(self.get_playtime_minutes(app_id))
+            if pt:
+                subtitle_parts.append(pt.lstrip(" |"))
+        ach = self.format_achievement_progress(app_id)
+        if ach:
+            subtitle_parts.append(ach.lstrip(" |"))
         if self.should_show_last_played():
-            subtitle += self.format_last_played(self.get_last_played_timestamp(app_id))
-        subtitle += self.get_local_game_account_notice(app_id)
+            lp = self.format_last_played(self.get_last_played_timestamp(app_id))
+            if lp:
+                subtitle_parts.append(lp.lstrip(" |"))
+        notice = self.get_local_game_account_notice(app_id)
+        if notice:
+            subtitle_parts.append(notice.lstrip(" |"))
         if include_player_count and self.should_show_player_count():
-            if player_count_loaded:
-                subtitle += self.format_player_count(player_count)
-            else:
-                subtitle += self.format_player_count(self.get_current_players(app_id))
+            pc = (
+                self.format_player_count(player_count)
+                if player_count_loaded
+                else self.format_player_count(self.get_current_players(app_id))
+            )
+            if pc:
+                subtitle_parts.append(pc.lstrip(" |"))
+
+        subtitle = " | ".join(subtitle_parts)
+
         if self.should_prefetch_refund_state(app_id):
             self.get_app_details_metadata(app_id, allow_network_on_miss=False)
         if refund_state is None:
@@ -128,7 +160,7 @@ class SteamPluginUIMixin:
         has_current_account_local_data = self.has_current_account_local_data(app_id)
 
         return self.build_result(
-            title=f"\U0001F3AE {display_name}",
+            title=f"\U0001F3AE {name}{title_marker}",
             subtitle=subtitle,
             icon_path=self.get_local_game_icon(app_id),
             context_data=self.build_context_data(

@@ -24,8 +24,10 @@ except ImportError:
     import _winreg as winreg
 
 
-LOG_FILE = plugindir / "steam_switch_worker.log"
-LOCK_FILE = plugindir / "steam_switch_worker.lock"
+RUNTIME_DIR = plugindir / "var"
+RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+LOG_FILE = RUNTIME_DIR / "steam_switch_worker.log"
+LOCK_FILE = RUNTIME_DIR / "steam_switch_worker.lock"
 NOTIFICATION_TITLE = "Steam Switch Failed"
 STEAM_RELAUNCH_SETTLE_SECONDS = 4.0
 STEAM_GAMES_URI = "steam://nav/games"
@@ -154,7 +156,7 @@ $notify.Dispose()
             **HIDDEN_PROCESS_KWARGS,
         )
     except Exception:
-        logger.exception("Failed to show Steam switch error notification")
+        logger.exception("failed to show switch error notification")
 
 
 def fail_worker(message, exit_code=1):
@@ -188,7 +190,7 @@ def terminate_steam_processes():
         if not is_windows_process_running(image_name):
             continue
 
-        logger.info("Stopping process %s", image_name)
+        logger.info("stopping process %s", image_name)
         command = ["taskkill", "/F"]
         if image_name in STEAM_TREE_KILL_IMAGE_NAMES:
             command.append("/T")
@@ -212,7 +214,7 @@ def terminate_steam_processes():
         raise RuntimeError(output_text or f"taskkill exited with code {result.returncode}")
 
     if wait_for_processes_to_stop(STEAM_PROCESS_IMAGE_NAMES, timeout_seconds=10):
-        logger.info("Steam processes stopped")
+        logger.info("processes stopped")
         return
 
     remaining_processes = [
@@ -220,7 +222,7 @@ def terminate_steam_processes():
         for image_name in STEAM_PROCESS_IMAGE_NAMES
         if is_windows_process_running(image_name)
     ]
-    raise RuntimeError(f"Steam processes still running: {', '.join(remaining_processes)}")
+    raise RuntimeError(f"processes still running: {', '.join(remaining_processes)}")
 
 
 def get_loginusers_path(steam_path):
@@ -244,7 +246,7 @@ def load_loginusers_data(loginusers_path):
                 parsed["users"] = {}
             return parsed
         except Exception:
-            logger.exception("Failed to load loginusers data from %s", candidate_path)
+            logger.exception("failed to load loginusers data from %s", candidate_path)
     return {}
 
 
@@ -292,14 +294,14 @@ def set_steam_registry_autologin_user(account_name):
 def launch_steam_client(steam_path):
     try:
         os.startfile(STEAM_GAMES_URI)
-        logger.info("Launched Steam via URI %s", STEAM_GAMES_URI)
+        logger.info("launched via uri %s", STEAM_GAMES_URI)
         return
     except Exception:
-        logger.exception("Failed to launch Steam via URI %s", STEAM_GAMES_URI)
+        logger.exception("failed to launch via uri %s", STEAM_GAMES_URI)
 
     steam_exe = steam_path / "steam.exe"
     if not steam_exe.exists():
-        raise FileNotFoundError(f"Steam executable not found at {steam_exe}")
+        raise FileNotFoundError(f"executable not found at {steam_exe}")
 
     subprocess.Popen(
         [str(steam_exe)],
@@ -309,7 +311,7 @@ def launch_steam_client(steam_path):
         stdin=subprocess.DEVNULL,
         **HIDDEN_PROCESS_KWARGS,
     )
-    logger.info("Launched Steam executable directly")
+    logger.info("launched executable directly")
 
 
 def main():
@@ -318,12 +320,12 @@ def main():
 
     steam_path = Path(sys.argv[1])
     target_steamid64 = str(sys.argv[2] or "").strip()
-    logger.info("Worker started for target SteamID64 ending with %s", target_steamid64[-4:] if target_steamid64 else "")
+    logger.info("worker started for target steamid64 ending with %s", target_steamid64[-4:] if target_steamid64 else "")
 
     if not steam_path.exists():
-        fail_worker(f"Steam path does not exist: {steam_path}")
+        fail_worker(f"path does not exist: {steam_path}")
     if not target_steamid64.isdigit():
-        fail_worker(f"Invalid target SteamID64: {target_steamid64}")
+        fail_worker(f"invalid target steamid64: {target_steamid64}")
 
     loginusers_path = get_loginusers_path(steam_path)
     if not loginusers_path:
@@ -331,7 +333,7 @@ def main():
 
     lock = FileLock(LOCK_FILE)
     if not lock.acquire(timeout=5):
-        fail_worker("Could not acquire Steam switch worker lock")
+        fail_worker("could not acquire switch worker lock")
 
     try:
         terminate_steam_processes()
@@ -340,18 +342,18 @@ def main():
             fail_worker("Target account not found in loginusers.vdf")
 
         target_account_name = str(updated_loginuser_data.get("AccountName", "") or "").strip()
-        logger.info("Updated loginusers.vdf for account %s", target_account_name or target_steamid64)
+        logger.info("updated loginusers.vdf for account %s", target_account_name or target_steamid64)
         set_steam_registry_autologin_user(target_account_name)
-        logger.info("Updated Steam registry AutoLoginUser=%s", target_account_name)
+        logger.info("updated registry AutoLoginUser=%s", target_account_name)
 
         logger.info("Waiting %.1f seconds before relaunch", STEAM_RELAUNCH_SETTLE_SECONDS)
         time.sleep(STEAM_RELAUNCH_SETTLE_SECONDS)
         launch_steam_client(steam_path)
-        logger.info("Steam launch requested")
+        logger.info("launch requested")
     except Exception as error:
-        logger.exception("Steam switch worker failed")
+        logger.exception("switch worker failed")
         error_message = str(error).strip()
-        show_error_notification(error_message or "Steam switch worker failed")
+        show_error_notification(error_message or "switch worker failed")
         sys.exit(1)
     finally:
         lock.release()
