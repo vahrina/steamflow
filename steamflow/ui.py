@@ -19,7 +19,7 @@ class SteamPluginUIMixin:
         subtitle = str(account_label).lower()
         profile_status = self.get_active_profile_status()
         if profile_status:
-            subtitle += f" {str(profile_status).lower()}"
+            subtitle += f" · {str(profile_status).lower()}"
         return subtitle
 
     def get_launch_steam_result_subtitle(self):
@@ -266,12 +266,12 @@ class SteamPluginUIMixin:
         uri = f"steam://rungameid/{app_id}"
         try:
             os.startfile(uri)
-            return "Game launched"
+            return "game launched"
         except Exception as original_error:
             try:
                 subprocess.run(["start", uri], shell=True)
-                return "Game launched"
+                return "game launched"
             except Exception:
                 self.log(
-                    "error", f"Failed to launch game {app_id}: {original_error}")
-                return f"Failed to launch game: {str(original_error)}"
+                    "error", f"failed to launch game {app_id}: {original_error}")
+                return f"failed to launch game: {str(original_error)}"

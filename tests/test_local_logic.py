@@ -1,3 +1,5 @@
+from steamflow.ui import SteamPluginUIMixin
+from steamflow.local import SteamPluginLocalMixin
 import sys
 import threading
 import unittest
@@ -11,10 +13,8 @@ if str(PROJECT_ROOT) not in sys.path:
 if str(LIB_PATH) not in sys.path:
     sys.path.insert(0, str(LIB_PATH))
 if "vdf" not in sys.modules:
-    sys.modules["vdf"] = SimpleNamespace(load=lambda *_args, **_kwargs: {}, dump=lambda *_args, **_kwargs: None)
-
-from steamflow.local import SteamPluginLocalMixin
-from steamflow.ui import SteamPluginUIMixin
+    sys.modules["vdf"] = SimpleNamespace(
+        load=lambda *_args, **_kwargs: {}, dump=lambda *_args, **_kwargs: None)
 
 
 class LocalLogicHarness(SteamPluginLocalMixin):
@@ -71,7 +71,8 @@ class RefundStateTests(unittest.TestCase):
 
     def test_refund_state_is_likely_for_paid_game_under_two_hours(self):
         self.plugin.playtime_minutes["1451940"] = 54
-        self.plugin.app_details_by_id["1451940"] = {"type": "game", "is_free": False}
+        self.plugin.app_details_by_id["1451940"] = {
+            "type": "game", "is_free": False}
         self.plugin.current_account_data_by_id["1451940"] = True
 
         refund_state = self.plugin.get_refund_state_for_local_game("1451940")
@@ -79,7 +80,8 @@ class RefundStateTests(unittest.TestCase):
         self.assertEqual(refund_state, "likely")
 
     def test_refund_state_is_unclear_for_paid_game_without_playtime(self):
-        self.plugin.app_details_by_id["1451940"] = {"type": "game", "is_free": False}
+        self.plugin.app_details_by_id["1451940"] = {
+            "type": "game", "is_free": False}
         self.plugin.current_account_data_by_id["1451940"] = True
 
         refund_state = self.plugin.get_refund_state_for_local_game("1451940")
@@ -88,7 +90,8 @@ class RefundStateTests(unittest.TestCase):
 
     def test_refund_state_is_hidden_for_games_over_two_hours(self):
         self.plugin.playtime_minutes["1451940"] = 200
-        self.plugin.app_details_by_id["1451940"] = {"type": "game", "is_free": False}
+        self.plugin.app_details_by_id["1451940"] = {
+            "type": "game", "is_free": False}
 
         refund_state = self.plugin.get_refund_state_for_local_game("1451940")
 
@@ -97,15 +100,20 @@ class RefundStateTests(unittest.TestCase):
     def test_refund_state_is_hidden_for_free_or_non_game_apps(self):
         self.plugin.playtime_minutes["111"] = 54
         self.plugin.playtime_minutes["222"] = 54
-        self.plugin.app_details_by_id["111"] = {"type": "game", "is_free": True}
-        self.plugin.app_details_by_id["222"] = {"type": "dlc", "is_free": False}
+        self.plugin.app_details_by_id["111"] = {
+            "type": "game", "is_free": True}
+        self.plugin.app_details_by_id["222"] = {
+            "type": "dlc", "is_free": False}
 
-        self.assertEqual(self.plugin.get_refund_state_for_local_game("111"), "")
-        self.assertEqual(self.plugin.get_refund_state_for_local_game("222"), "")
+        self.assertEqual(
+            self.plugin.get_refund_state_for_local_game("111"), "")
+        self.assertEqual(
+            self.plugin.get_refund_state_for_local_game("222"), "")
 
     def test_refund_state_is_hidden_without_current_account_data(self):
         self.plugin.playtime_minutes["1451940"] = 54
-        self.plugin.app_details_by_id["1451940"] = {"type": "game", "is_free": False}
+        self.plugin.app_details_by_id["1451940"] = {
+            "type": "game", "is_free": False}
         self.plugin.current_account_data_by_id["1451940"] = False
 
         refund_state = self.plugin.get_refund_state_for_local_game("1451940")
@@ -127,15 +135,17 @@ class LocalAccountNoticeTests(unittest.TestCase):
 
     def test_notice_warns_when_active_account_does_not_own_game(self):
         self.plugin.ownership_state_by_id["10"] = "not_owned"
-        self.plugin.app_details_by_id["10"] = {"type": "game", "is_free": False}
+        self.plugin.app_details_by_id["10"] = {
+            "type": "game", "is_free": False}
 
         notice = self.plugin.get_local_game_account_notice("10")
 
-        self.assertEqual(notice, " | Installed via another account")
+        self.assertEqual(notice, " · Installed via another account")
 
     def test_notice_is_hidden_when_current_account_has_local_data(self):
         self.plugin.ownership_state_by_id["570"] = "not_owned"
-        self.plugin.app_details_by_id["570"] = {"type": "game", "is_free": False}
+        self.plugin.app_details_by_id["570"] = {
+            "type": "game", "is_free": False}
         self.plugin.current_account_data_by_id["570"] = True
 
         notice = self.plugin.get_local_game_account_notice("570")
@@ -144,7 +154,8 @@ class LocalAccountNoticeTests(unittest.TestCase):
 
     def test_notice_is_hidden_for_free_games_when_metadata_is_known(self):
         self.plugin.ownership_state_by_id["570"] = "not_owned"
-        self.plugin.app_details_by_id["570"] = {"type": "game", "is_free": True}
+        self.plugin.app_details_by_id["570"] = {
+            "type": "game", "is_free": True}
 
         notice = self.plugin.get_local_game_account_notice("570")
 
@@ -157,7 +168,7 @@ class LocalAccountNoticeTests(unittest.TestCase):
 
         notice = self.plugin.get_local_game_account_notice("10")
 
-        self.assertEqual(notice, " | No current-account data")
+        self.assertEqual(notice, " · No current-account data")
 
 
 class StateFlagParsingTests(unittest.TestCase):
@@ -165,13 +176,15 @@ class StateFlagParsingTests(unittest.TestCase):
         self.plugin = LocalLogicHarness()
 
     def test_parse_state_flags_marks_fully_installed_game_visible(self):
-        parsed = self.plugin.parse_state_flags(self.plugin.STATE_FLAG_FULLY_INSTALLED)
+        parsed = self.plugin.parse_state_flags(
+            self.plugin.STATE_FLAG_FULLY_INSTALLED)
 
         self.assertTrue(parsed["is_visible"])
         self.assertEqual(parsed["label"], "")
 
     def test_parse_state_flags_marks_update_required_before_install(self):
-        parsed = self.plugin.parse_state_flags(self.plugin.STATE_FLAG_UPDATE_REQUIRED)
+        parsed = self.plugin.parse_state_flags(
+            self.plugin.STATE_FLAG_UPDATE_REQUIRED)
 
         self.assertTrue(parsed["is_visible"])
         self.assertEqual(parsed["label"], "Update Required")
@@ -185,7 +198,8 @@ class StateFlagParsingTests(unittest.TestCase):
         self.assertEqual(parsed["label"], "Update Queued")
 
     def test_parse_state_flags_marks_paused_update(self):
-        parsed = self.plugin.parse_state_flags(self.plugin.STATE_FLAG_UPDATE_PAUSED)
+        parsed = self.plugin.parse_state_flags(
+            self.plugin.STATE_FLAG_UPDATE_PAUSED)
 
         self.assertTrue(parsed["is_visible"])
         self.assertEqual(parsed["label"], "Update Paused")
@@ -209,4 +223,4 @@ class AchievementDisplayTests(unittest.TestCase):
 
         suffix = self.plugin.format_achievement_progress("570")
 
-        self.assertEqual(suffix, " | 3/100")
+        self.assertEqual(suffix, " · 3/100")

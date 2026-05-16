@@ -128,6 +128,7 @@ class WishlistHarness(SteamPluginWishlistMixin, SteamPluginStorageMixin, SteamPl
 
     def process_game_data(self, game_data, allow_cold_metric_fetch=True):
         return {
+            # \U0001F6D2
             "Title": f"\U0001F6D2 {game_data['name']}",
             "SubTitle": "Open in Steam store",
             "IcoPath": "icon",

@@ -1,3 +1,4 @@
+from steamflow.store_metrics import SteamPluginStoreMetricsMixin
 import sys
 import unittest
 from pathlib import Path
@@ -8,8 +9,6 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 if str(LIB_PATH) not in sys.path:
     sys.path.insert(0, str(LIB_PATH))
-
-from steamflow.store_metrics import SteamPluginStoreMetricsMixin
 
 
 class StoreMetricsHarness(SteamPluginStoreMetricsMixin):
@@ -47,7 +46,8 @@ class StoreMetricsHarness(SteamPluginStoreMetricsMixin):
         return {"method": method, "parameters": list(parameters)}
 
     def build_result(self, title, subtitle, icon_path=None, action=None, context_data=None, **extra_fields):
-        result = {"Title": title, "SubTitle": subtitle, "IcoPath": icon_path, "Action": action}
+        result = {"Title": title, "SubTitle": subtitle,
+                  "IcoPath": icon_path, "Action": action}
         result.update(extra_fields)
         return result
 
@@ -98,7 +98,7 @@ class StoreMetricsTests(unittest.TestCase):
             }
         )
 
-        self.assertEqual(result, " | Coming Soon")
+        self.assertEqual(result, " · Coming Soon")
 
     def test_true_free_games_still_render_free_badge(self):
         harness = StoreMetricsHarness()
@@ -112,7 +112,7 @@ class StoreMetricsTests(unittest.TestCase):
             }
         )
 
-        self.assertEqual(result, " | Free")
+        self.assertEqual(result, " · Free")
 
     def test_process_game_data_appends_real_release_date_from_appdetails(self):
         harness = StoreMetricsHarness()
@@ -142,7 +142,7 @@ class StoreMetricsTests(unittest.TestCase):
             allow_cold_metric_fetch=False,
         )
 
-        self.assertIn("| 10 Feb, 2026", result["SubTitle"])
+        self.assertIn("· 10 Feb, 2026", result["SubTitle"])
 
     def test_process_game_data_hides_placeholder_release_date_when_coming_soon_is_already_shown(self):
         harness = StoreMetricsHarness()
@@ -239,7 +239,8 @@ class StoreMetricsTests(unittest.TestCase):
         self.assertEqual(result["Title"], "\U0001F3AE Dota 2 [Owned]")
         self.assertEqual(
             result["Action"],
-            {"method": "open_steam_library_game_details", "parameters": ["570"]},
+            {"method": "open_steam_library_game_details",
+                "parameters": ["570"]},
         )
 
 

@@ -274,7 +274,7 @@ class SteamPluginWishlistMixin:
                 if review_str:
                     parts.append(review_str)
 
-        return " | ".join(parts)
+        return " · ".join(parts)
 
     def build_wishlist_result(self, wishlist_item, allow_cold_detail_fetch=True):
         app_id = wishlist_item["appid"]
@@ -310,8 +310,9 @@ class SteamPluginWishlistMixin:
 
         subtitle = f"{loaded_count}/{total_count} loaded"
         if matching_count is not None and search_term:
-            subtitle += f" | {matching_count} match so far"
-        subtitle += " | more as cache warms"
+            # change me
+            subtitle += f" · {matching_count} match so far"
+        subtitle += " · more as cache warms"
         return self.build_result(
             title=title,
             subtitle=subtitle,

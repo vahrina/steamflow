@@ -2,8 +2,9 @@ import time
 
 from flox.clipboard import get as get_clipboard_text
 
+
 class SteamPluginUICommandsMixin:
-    OWNED_API_QUERY_ALIASES = {"api", "api key", "apikey",}
+    OWNED_API_QUERY_ALIASES = {"api", "api key", "apikey", }
     SWITCH_ACCOUNT_QUERY_ALIASES = {"switch", "account", "user", "sw", "acc"}
     STATUS_QUERY_ALIASES = {"status", "statuses", "s"}
     EXIT_QUERY_ALIASES = {"exit", "quit", "kill"}
@@ -48,7 +49,8 @@ class SteamPluginUICommandsMixin:
         return self._extract_query_suffix(search_term, self.SWITCH_ACCOUNT_QUERY_ALIASES) is not None
 
     def get_switch_query_text(self, search_term):
-        value = self._extract_query_suffix(search_term, self.SWITCH_ACCOUNT_QUERY_ALIASES)
+        value = self._extract_query_suffix(
+            search_term, self.SWITCH_ACCOUNT_QUERY_ALIASES)
         return value if value is not None else ""
 
     def is_status_query(self, search_term):
@@ -69,7 +71,7 @@ class SteamPluginUICommandsMixin:
                 return ""
             prefix = f"{alias} "
             if normalized.startswith(prefix):
-                return raw_value[len(prefix) :].strip()
+                return raw_value[len(prefix):].strip()
         return ""
 
     def is_exit_query(self, search_term):
@@ -89,7 +91,7 @@ class SteamPluginUICommandsMixin:
                 return ""
             prefix = f"{alias} "
             if normalized.startswith(prefix):
-                return raw_value[len(prefix) :].strip()
+                return raw_value[len(prefix):].strip()
         return None
 
     def get_wishlist_query_text(self, search_term):
@@ -127,7 +129,8 @@ class SteamPluginUICommandsMixin:
         return self._extract_query_suffix(search_term, self.SETTINGS_QUERY_ALIASES) is not None
 
     def get_settings_query_text(self, search_term):
-        value = self._extract_query_suffix(search_term, self.SETTINGS_QUERY_ALIASES)
+        value = self._extract_query_suffix(
+            search_term, self.SETTINGS_QUERY_ALIASES)
         return value if value is not None else ""
 
     @staticmethod
@@ -145,7 +148,8 @@ class SteamPluginUICommandsMixin:
             positions.append(j)
             j += 1
         first = positions[0]
-        gaps = sum(positions[i + 1] - positions[i] - 1 for i in range(len(positions) - 1))
+        gaps = sum(positions[i + 1] - positions[i] -
+                   1 for i in range(len(positions) - 1))
         return len(n) * 1000 - first * 10 - gaps
 
     def _settings_hub_categories(self):
@@ -162,85 +166,149 @@ class SteamPluginUICommandsMixin:
         """return (title, subtitle, icon_path, action, score) per row"""
         if category == "general":
             return [
-                ("library", "steam://nav/games", self.DEFAULT_ICON, self.build_action("open_steam_library_nav"), 21820),
-                ("community home", "steam://open/community", self.COMMUNITY_ICON, self.build_action("open_steam_community_home"), 21819),
-                ("activity feed", "steam://open/activity", self.COMMUNITY_ICON, self.build_action("open_steam_activity_feed"), 21818),
-                ("friends", "steam://friends", self.COMMUNITY_ICON, self.build_action("open_steam_friends"), 21817),
-                ("market", "steam://open/market", self.COMMUNITY_ICON, self.build_action("open_steam_market"), 21816),
-                ("store", "steam://open/store", self.BROWSER_ICON, self.build_action("open_steam_store_front"), 21815),
-                ("notifications", "", self.COMMUNITY_ICON, self.build_action("open_steam_my_path", "/notifications"), 21814),
-                ("points shop", "store points", self.BROWSER_ICON, self.build_action("open_steam_points_shop"), 21813),
-                ("comment history", "", self.COMMUNITY_ICON, self.build_action("open_steam_my_path", "/commenthistory"), 21812),
+                ("library", "steam://nav/games", self.DEFAULT_ICON,
+                 self.build_action("open_steam_library_nav"), 21820),
+                ("community home", "steam://open/community", self.COMMUNITY_ICON,
+                 self.build_action("open_steam_community_home"), 21819),
+                ("activity feed", "steam://open/activity", self.COMMUNITY_ICON,
+                 self.build_action("open_steam_activity_feed"), 21818),
+                ("friends", "steam://friends", self.COMMUNITY_ICON,
+                 self.build_action("open_steam_friends"), 21817),
+                ("market", "steam://open/market", self.COMMUNITY_ICON,
+                 self.build_action("open_steam_market"), 21816),
+                ("store", "steam://open/store", self.BROWSER_ICON,
+                 self.build_action("open_steam_store_front"), 21815),
+                ("notifications", "", self.COMMUNITY_ICON, self.build_action(
+                    "open_steam_my_path", "/notifications"), 21814),
+                ("points shop", "store points", self.BROWSER_ICON,
+                 self.build_action("open_steam_points_shop"), 21813),
+                ("comment history", "", self.COMMUNITY_ICON, self.build_action(
+                    "open_steam_my_path", "/commenthistory"), 21812),
             ]
         if category == "profile":
             return [
-                ("my profile", "steamcommunity.com/my", self.DEFAULT_ICON, self.build_action("open_steam_my_profile_client"), 21820),
-                ("groups", "steam://open/groups", self.COMMUNITY_ICON, self.build_action("open_steam_my_groups"), 21819),
-                ("inventory", "", self.COMMUNITY_ICON, self.build_action("open_steam_my_path", "/inventory"), 21818),
-                ("games", "", self.COMMUNITY_ICON, self.build_action("open_steam_my_path", "/games"), 21817),
-                ("screenshots", "", self.SCREENSHOT_ICON, self.build_action("open_steam_my_path", "/screenshots"), 21816),
-                ("videos", "", self.COMMUNITY_ICON, self.build_action("open_steam_my_path", "/videos"), 21815),
-                ("workshop items", "", self.COMMUNITY_ICON, self.build_action("open_steam_my_path", "/myworkshopfiles"), 21814),
-                ("artwork", "", self.COMMUNITY_ICON, self.build_action("open_steam_my_path", "/images"), 21813),
-                ("guides", "", self.GUIDES_ICON, self.build_action("open_steam_my_path", "/myworkshopfiles/?section=guides"), 21812),
+                ("my profile", "steamcommunity.com/my", self.DEFAULT_ICON,
+                 self.build_action("open_steam_my_profile_client"), 21820),
+                ("groups", "steam://open/groups", self.COMMUNITY_ICON,
+                 self.build_action("open_steam_my_groups"), 21819),
+                ("inventory", "", self.COMMUNITY_ICON, self.build_action(
+                    "open_steam_my_path", "/inventory"), 21818),
+                ("games", "", self.COMMUNITY_ICON, self.build_action(
+                    "open_steam_my_path", "/games"), 21817),
+                ("screenshots", "", self.SCREENSHOT_ICON, self.build_action(
+                    "open_steam_my_path", "/screenshots"), 21816),
+                ("videos", "", self.COMMUNITY_ICON, self.build_action(
+                    "open_steam_my_path", "/videos"), 21815),
+                ("workshop items", "", self.COMMUNITY_ICON, self.build_action(
+                    "open_steam_my_path", "/myworkshopfiles"), 21814),
+                ("artwork", "", self.COMMUNITY_ICON, self.build_action(
+                    "open_steam_my_path", "/images"), 21813),
+                ("guides", "", self.GUIDES_ICON, self.build_action(
+                    "open_steam_my_path", "/myworkshopfiles/?section=guides"), 21812),
             ]
         if category == "edit":
             return [
-                ("general", "edit profile info", self.SETTINGS_ICON, self.build_action("open_steam_my_path", "/edit/info"), 21810),
-                ("avatar", "/edit/", self.SETTINGS_ICON, self.build_action("open_steam_my_path", "/edit/avatar"), 21809),
-                ("profile background", "/edit/", self.SETTINGS_ICON, self.build_action("open_steam_my_path", "/edit/background"), 21808),
-                ("miniprofile", "/edit/", self.SETTINGS_ICON, self.build_action("open_steam_my_path", "/edit/miniprofile"), 21807),
-                ("theme", "/edit/", self.SETTINGS_ICON, self.build_action("open_steam_my_path", "/edit/theme"), 21806),
-                ("game profile", "/edit/", self.SETTINGS_ICON, self.build_action("open_steam_my_path", "/edit/goldenprofile"), 21805),
-                ("featured badge", "/edit/", self.SETTINGS_ICON, self.build_action("open_steam_my_path", "/edit/favoritebadge"), 21804),
-                ("favorite group", "/edit/", self.SETTINGS_ICON, self.build_action("open_steam_my_path", "/edit/favoritegroup"), 21803),
-                ("showcase manager", "/edit/", self.SETTINGS_ICON, self.build_action("open_steam_my_path", "/edit/showcases"), 21802),
-                ("privacy settings", "/edit/", self.SETTINGS_ICON, self.build_action("open_steam_my_path", "/edit"), 21801),
+                ("general", "edit profile info", self.SETTINGS_ICON,
+                 self.build_action("open_steam_my_path", "/edit/info"), 21810),
+                ("avatar", "/edit/", self.SETTINGS_ICON,
+                 self.build_action("open_steam_my_path", "/edit/avatar"), 21809),
+                ("profile background", "/edit/", self.SETTINGS_ICON,
+                 self.build_action("open_steam_my_path", "/edit/background"), 21808),
+                ("miniprofile", "/edit/", self.SETTINGS_ICON,
+                 self.build_action("open_steam_my_path", "/edit/miniprofile"), 21807),
+                ("theme", "/edit/", self.SETTINGS_ICON,
+                 self.build_action("open_steam_my_path", "/edit/theme"), 21806),
+                ("game profile", "/edit/", self.SETTINGS_ICON,
+                 self.build_action("open_steam_my_path", "/edit/goldenprofile"), 21805),
+                ("featured badge", "/edit/", self.SETTINGS_ICON,
+                 self.build_action("open_steam_my_path", "/edit/favoritebadge"), 21804),
+                ("favorite group", "/edit/", self.SETTINGS_ICON,
+                 self.build_action("open_steam_my_path", "/edit/favoritegroup"), 21803),
+                ("showcase manager", "/edit/", self.SETTINGS_ICON,
+                 self.build_action("open_steam_my_path", "/edit/showcases"), 21802),
+                ("privacy settings", "/edit/", self.SETTINGS_ICON,
+                 self.build_action("open_steam_my_path", "/edit"), 21801),
             ]
         if category == "account":
             return [
-                ("account details", "preferences", self.BROWSER_ICON, self.build_action("open_steam_url", "https://store.steampowered.com/account/"), 21810),
-                ("store preferences", "preferences", self.BROWSER_ICON, self.build_action("open_steam_url", "https://store.steampowered.com/account/preferences"), 21809),
-                ("family management", "preferences", self.BROWSER_ICON, self.build_action("open_steam_url", "https://store.steampowered.com/account/familymanagement"), 21808),
-                ("security & devices", "preferences", self.BROWSER_ICON, self.build_action("open_steam_url", "https://store.steampowered.com/account/authorizeddevices"), 21807),
-                ("language preferences", "preferences", self.BROWSER_ICON, self.build_action("open_steam_url", "https://store.steampowered.com/account/languagepreferences"), 21806),
-                ("data & browsing", "preferences", self.BROWSER_ICON, self.build_action("open_steam_url", "https://store.steampowered.com/account/cookiepreferences"), 21805),
-                ("notification settings", "preferences", self.BROWSER_ICON, self.build_action("open_steam_url", "https://store.steampowered.com/account/notificationsettings"), 21804),
-                ("playtests", "preferences", self.BROWSER_ICON, self.build_action("open_steam_url", "https://store.steampowered.com/account/gatedaccess"), 21803),
+                ("account details", "preferences", self.BROWSER_ICON, self.build_action(
+                    "open_steam_url", "https://store.steampowered.com/account/"), 21810),
+                ("store preferences", "preferences", self.BROWSER_ICON, self.build_action(
+                    "open_steam_url", "https://store.steampowered.com/account/preferences"), 21809),
+                ("family management", "preferences", self.BROWSER_ICON, self.build_action(
+                    "open_steam_url", "https://store.steampowered.com/account/familymanagement"), 21808),
+                ("security & devices", "preferences", self.BROWSER_ICON, self.build_action(
+                    "open_steam_url", "https://store.steampowered.com/account/authorizeddevices"), 21807),
+                ("language preferences", "preferences", self.BROWSER_ICON, self.build_action(
+                    "open_steam_url", "https://store.steampowered.com/account/languagepreferences"), 21806),
+                ("data & browsing", "preferences", self.BROWSER_ICON, self.build_action(
+                    "open_steam_url", "https://store.steampowered.com/account/cookiepreferences"), 21805),
+                ("notification settings", "preferences", self.BROWSER_ICON, self.build_action(
+                    "open_steam_url", "https://store.steampowered.com/account/notificationsettings"), 21804),
+                ("playtests", "preferences", self.BROWSER_ICON, self.build_action(
+                    "open_steam_url", "https://store.steampowered.com/account/gatedaccess"), 21803),
             ]
         if category == "steam":
             return [
-                ("account", "steam://settings/account", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "account"), 21795),
-                ("friends & chat", "steam://settings/friends", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "friends"), 21794),
-                ("family", "steam://settings/family", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "family"), 21793),
-                ("security", "steam://settings/security", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "security"), 21792),
-                ("notifications", "steam://settings/notifications", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "notifications"), 21791),
-                ("interface", "steam://settings/interface", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "interface"), 21790),
-                ("store", "steam://settings/store", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "store"), 21789),
-                ("library", "steam://settings/library", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "library"), 21788),
-                ("downloads", "steam://settings/downloads", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "downloads"), 21787),
-                ("storage", "steam://settings/storage", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "storage"), 21786),
-                ("cloud", "steam://settings/cloud", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "cloud"), 21785),
-                ("in game", "steam://settings/ingame", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "ingame"), 21784),
-                ("accessibility", "steam://settings/accessibility", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "accessibility"), 21783),
-                ("controller", "steam://settings/controller", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "controller"), 21782),
-                ("game recording", "steam://settings/gamerecording", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "gamerecording"), 21781),
-                ("voice", "steam://settings/voice", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "voice"), 21780),
-                ("broadcast", "steam://settings/broadcast", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "broadcast"), 21778),
-                ("music", "steam://settings/music", self.SETTINGS_ICON, self.build_action("open_steam_settings_sub_page", "music"), 21777),
+                ("account", "steam://settings/account", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "account"), 21795),
+                ("friends & chat", "steam://settings/friends", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "friends"), 21794),
+                ("family", "steam://settings/family", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "family"), 21793),
+                ("security", "steam://settings/security", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "security"), 21792),
+                ("notifications", "steam://settings/notifications", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "notifications"), 21791),
+                ("interface", "steam://settings/interface", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "interface"), 21790),
+                ("store", "steam://settings/store", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "store"), 21789),
+                ("library", "steam://settings/library", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "library"), 21788),
+                ("downloads", "steam://settings/downloads", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "downloads"), 21787),
+                ("storage", "steam://settings/storage", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "storage"), 21786),
+                ("cloud", "steam://settings/cloud", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "cloud"), 21785),
+                ("in game", "steam://settings/ingame", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "ingame"), 21784),
+                ("accessibility", "steam://settings/accessibility", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "accessibility"), 21783),
+                ("controller", "steam://settings/controller", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "controller"), 21782),
+                ("game recording", "steam://settings/gamerecording", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "gamerecording"), 21781),
+                ("voice", "steam://settings/voice", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "voice"), 21780),
+                ("broadcast", "steam://settings/broadcast", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "broadcast"), 21778),
+                ("music", "steam://settings/music", self.SETTINGS_ICON,
+                 self.build_action("open_steam_settings_sub_page", "music"), 21777),
             ]
         if category == "client":
             return [
-                ("recent players", "steam://friends/players", self.COMMUNITY_ICON, self.build_action("open_steam_friends_recent_players"), 21949),
-                ("steam workshop", "steam://url/SteamWorkshop", self.DEFAULT_ICON, self.build_action("open_steam_url_named_page", "SteamWorkshop"), 21941),
-                ("community home", "steam://url/CommunityHome/", self.COMMUNITY_ICON, self.build_action("open_steam_url_named_page", "CommunityHome/"), 21940),
-                ("comment notifications", "steam://url/CommentNotifications", self.COMMUNITY_ICON, self.build_action("open_steam_url_named_page", "CommentNotifications"), 21937),
-                ("family sharing", "steam://url/FamilySharing", self.COMMUNITY_ICON, self.build_action("open_steam_url_named_page", "FamilySharing"), 21936),
-                ("my help requests", "steam://url/MyHelpRequests", self.COMMUNITY_ICON, self.build_action("open_steam_url_named_page", "MyHelpRequests"), 21935),
-                ("console", "steam://nav/console", self.DEFAULT_ICON, self.build_action("open_steam_nav_component", "console"), 21934),
-                ("downloads", "steam://nav/downloads", self.DOWNLOAD_ICON, self.build_action("open_steam_nav_component", "downloads"), 21933),
-                ("games", "steam://nav/games", self.DEFAULT_ICON, self.build_action("open_steam_nav_component", "games"), 21932),
-                ("hidden collection", "steam://nav/library/collection/hidden", self.DEFAULT_ICON, self.build_action("open_steam_nav_component", "library/collection/hidden"), 21928),
+                ("recent players", "steam://friends/players", self.COMMUNITY_ICON,
+                 self.build_action("open_steam_friends_recent_players"), 21949),
+                ("steam workshop", "steam://url/SteamWorkshop", self.DEFAULT_ICON,
+                 self.build_action("open_steam_url_named_page", "SteamWorkshop"), 21941),
+                ("community home", "steam://url/CommunityHome/", self.COMMUNITY_ICON,
+                 self.build_action("open_steam_url_named_page", "CommunityHome/"), 21940),
+                ("comment notifications", "steam://url/CommentNotifications", self.COMMUNITY_ICON,
+                 self.build_action("open_steam_url_named_page", "CommentNotifications"), 21937),
+                ("family sharing", "steam://url/FamilySharing", self.COMMUNITY_ICON,
+                 self.build_action("open_steam_url_named_page", "FamilySharing"), 21936),
+                ("my help requests", "steam://url/MyHelpRequests", self.COMMUNITY_ICON,
+                 self.build_action("open_steam_url_named_page", "MyHelpRequests"), 21935),
+                ("console", "steam://nav/console", self.DEFAULT_ICON,
+                 self.build_action("open_steam_nav_component", "console"), 21934),
+                ("downloads", "steam://nav/downloads", self.DOWNLOAD_ICON,
+                 self.build_action("open_steam_nav_component", "downloads"), 21933),
+                ("games", "steam://nav/games", self.DEFAULT_ICON,
+                 self.build_action("open_steam_nav_component", "games"), 21932),
+                ("hidden collection", "steam://nav/library/collection/hidden", self.DEFAULT_ICON,
+                 self.build_action("open_steam_nav_component", "library/collection/hidden"), 21928),
             ]
         return []
 
@@ -296,7 +364,8 @@ class SteamPluginUICommandsMixin:
                 ),
             ]
         return [
-            self._settings_row(category, title, subtitle, icon_path, action, score)
+            self._settings_row(category, title, subtitle,
+                               icon_path, action, score)
             for title, subtitle, icon_path, action, score in filtered
         ]
 
@@ -334,7 +403,8 @@ class SteamPluginUICommandsMixin:
                     title="no fuzzy matches",
                     subtitle="",
                     icon_path=self.WARNING_ICON,
-                    action=self.build_change_query_action(settings_fzf_base + " "),
+                    action=self.build_change_query_action(
+                        settings_fzf_base + " "),
                     auto_complete_text=settings_fzf_base,
                     Score=21800,
                 ),
@@ -374,7 +444,8 @@ class SteamPluginUICommandsMixin:
             if not filter_key:
                 return True
             label = self.get_steam_account_label(account).lower()
-            account_name = str(account.get("account_name", "") or "").strip().lower()
+            account_name = str(account.get(
+                "account_name", "") or "").strip().lower()
             steamid = str(account.get("steamid64", "") or "")
             return (
                 filter_key in label
@@ -420,8 +491,10 @@ class SteamPluginUICommandsMixin:
                     title=title,
                     subtitle="".join(subtitle_parts),
                     icon_path=account.get("icon_path") or self.DEFAULT_ICON,
-                    action=self.build_action("switch_steam_account", account.get("steamid64")),
-                    auto_complete_text=self.build_plugin_query("switch", title),
+                    action=self.build_action(
+                        "switch_steam_account", account.get("steamid64")),
+                    auto_complete_text=self.build_plugin_query(
+                        "switch", title),
                     Score=21001 - score_offset,
                 )
             )
@@ -496,8 +569,10 @@ class SteamPluginUICommandsMixin:
                     title=name,
                     subtitle="",
                     icon_path=icon,
-                    action=self.build_change_query_action(self.build_plugin_query("settings", name)),
-                    auto_complete_text=self.build_plugin_query("settings", name),
+                    action=self.build_change_query_action(
+                        self.build_plugin_query("settings", name)),
+                    auto_complete_text=self.build_plugin_query(
+                        "settings", name),
                     Score=21820 - idx,
                 )
                 for idx, (name, subtitle, icon) in enumerate(categories, start=1)
@@ -514,7 +589,8 @@ class SteamPluginUICommandsMixin:
                     title="fzf",
                     subtitle="",
                     icon_path=self.DEFAULT_ICON,
-                    action=self.build_change_query_action(settings_fzf_query + " "),
+                    action=self.build_change_query_action(
+                        settings_fzf_query + " "),
                     auto_complete_text=settings_fzf_query,
                     Score=21811,
                 ),
@@ -557,7 +633,8 @@ class SteamPluginUICommandsMixin:
                     title="fzf",
                     subtitle="",
                     icon_path=self.DEFAULT_ICON,
-                    action=self.build_change_query_action(settings_fzf_query + " "),
+                    action=self.build_change_query_action(
+                        settings_fzf_query + " "),
                     auto_complete_text=settings_fzf_query,
                     Score=21848,
                 ),
@@ -580,8 +657,10 @@ class SteamPluginUICommandsMixin:
                         title=name,
                         subtitle="",
                         icon_path=icon,
-                        action=self.build_change_query_action(self.build_plugin_query("settings", name)),
-                        auto_complete_text=self.build_plugin_query("settings", name),
+                        action=self.build_change_query_action(
+                            self.build_plugin_query("settings", name)),
+                        auto_complete_text=self.build_plugin_query(
+                            "settings", name),
                         Score=21830 - idx,
                     )
                     for idx, (name, subtitle, icon) in enumerate(category_matches, start=1)
@@ -616,7 +695,7 @@ class SteamPluginUICommandsMixin:
         api_configured = self.has_owned_api_key()
 
         hint = self.WISHLIST_ERROR_HINTS.get(wishlist_error)
-        wishlist_subtitle = f"wishlist | {hint}" if hint else "price, date & reviews"
+        wishlist_subtitle = f"wishlist · {hint}" if hint else "price, date & reviews"
 
         results = []
 
@@ -636,48 +715,49 @@ class SteamPluginUICommandsMixin:
                 title=f"{keyword} [game]",
                 subtitle="search library & store",
                 icon_path=self.DEFAULT_ICON,
-                action=self.build_change_query_action(keyword + " ", requery=False),
+                action=self.build_change_query_action(
+                    keyword + " ", requery=False),
                 Score=22050,
             ),
         ]
         if self.should_show_help_api():
             results.append(
-            self.build_result(
-                title="api",
-                subtitle="",
-                icon_path=self.OWNED_ICON,
-                action=self.build_change_query_action(api_query),
-                Score=22000,
+                self.build_result(
+                    title="api",
+                    subtitle="",
+                    icon_path=self.OWNED_ICON,
+                    action=self.build_change_query_action(api_query),
+                    Score=22000,
                 )
             )
         if self.should_show_help_switch():
             results.append(
-            self.build_result(
-                title="switch",
-                subtitle="switch between registered accounts",
-                icon_path=self.COMMUNITY_ICON,
-                action=self.build_change_query_action(switch_query),
-                Score=21999,
+                self.build_result(
+                    title="switch",
+                    subtitle="switch between registered accounts",
+                    icon_path=self.COMMUNITY_ICON,
+                    action=self.build_change_query_action(switch_query),
+                    Score=21999,
                 )
             )
         if self.should_show_help_status():
             results.append(
-            self.build_result(
-                title="status",
-                subtitle="set online/away/invisible/offline",
-                icon_path=self.ONLINE_ICON,
-                action=self.build_change_query_action(status_query),
-                Score=21998,
+                self.build_result(
+                    title="status",
+                    subtitle="set online/away/invisible/offline",
+                    icon_path=self.ONLINE_ICON,
+                    action=self.build_change_query_action(status_query),
+                    Score=21998,
                 )
             )
         if self.should_show_help_wishlist():
             results.append(
-            self.build_result(
-                title="wishlist",
-                subtitle=wishlist_subtitle,
-                icon_path=self.WISHLIST_ICON,
-                action=self.build_change_query_action(wishlist_query),
-                Score=21997,
+                self.build_result(
+                    title="wishlist",
+                    subtitle=wishlist_subtitle,
+                    icon_path=self.WISHLIST_ICON,
+                    action=self.build_change_query_action(wishlist_query),
+                    Score=21997,
                 )
             )
         if self.should_show_help_settings():
@@ -690,6 +770,16 @@ class SteamPluginUICommandsMixin:
                     Score=21996,
                 )
             )
+            if self.should_show_help_clear():
+                results.append(
+                    self.build_result(
+                        title="clear",
+                        subtitle="logs & cache json in var/",
+                        icon_path=self.TRASH_ICON,
+                        action=self.build_change_query_action(clear_query),
+                        Score=21995,
+                    )
+                )
         if self.should_show_help_restart():
             results.append(
                 self.build_result(
@@ -697,7 +787,7 @@ class SteamPluginUICommandsMixin:
                     subtitle="",
                     icon_path=self.WARNING_ICON,
                     action=self.build_change_query_action(restart_query),
-                    Score=21995,
+                    Score=21994,
                 )
             )
         if self.should_show_help_exit():
@@ -707,16 +797,6 @@ class SteamPluginUICommandsMixin:
                     subtitle="",
                     icon_path=self.WARNING_ICON,
                     action=self.build_change_query_action(exit_query),
-                    Score=21994,
-                )
-            )
-        if self.should_show_help_clear():
-            results.append(
-                self.build_result(
-                    title="clear",
-                    subtitle="logs & cache json in var/",
-                    icon_path=self.TRASH_ICON,
-                    action=self.build_change_query_action(clear_query),
                     Score=21993,
                 )
             )
@@ -791,7 +871,8 @@ class SteamPluginUICommandsMixin:
                     title=status_label,
                     subtitle="",
                     icon_path=self.get_status_icon_path(status_key),
-                    action=self.build_action("set_steam_friends_status", status_key),
+                    action=self.build_action(
+                        "set_steam_friends_status", status_key),
                     Score=self.STATUS_OPTION_BASE_SCORE + score_bonus - score_offset,
                 )
             )
@@ -856,7 +937,8 @@ class SteamPluginUICommandsMixin:
             return message
 
         try:
-            owned_app_ids, owned_game_playtimes = self.fetch_owned_app_ids_from_api(api_key, steamid64, timeout=5)
+            owned_app_ids, owned_game_playtimes = self.fetch_owned_app_ids_from_api(
+                api_key, steamid64, timeout=5)
         except Exception as error:
             self.log("error", f"api key validation failed: {error}")
             err = str(error).strip()

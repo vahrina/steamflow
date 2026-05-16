@@ -1,50 +1,55 @@
 body:
+  - type: textBlock
+    attributes:
+      name: help_command_label
+      description: "toggle the visibility of following options"
+
   - type: checkbox
     attributes:
       name: show_help_api
-      label: "show api" 
+      label: "api"
       defaultValue: true
 
   - type: checkbox
     attributes:
       name: show_help_switch
-      label: "show switch"
+      label: "switch"
       defaultValue: true
 
   - type: checkbox
     attributes:
       name: show_help_status
-      label: "show status"
+      label: "status"
       defaultValue: true
 
   - type: checkbox
     attributes:
       name: show_help_wishlist
-      label: "show wishlist"
+      label: "wishlist"
       defaultValue: true
 
   - type: checkbox
     attributes:
       name: show_help_settings
-      label: "show settings"
-      defaultValue: true
-
-  - type: checkbox
-    attributes:
-      name: show_help_restart
-      label: "show restart"
-      defaultValue: true
-
-  - type: checkbox
-    attributes:
-      name: show_help_exit
-      label: "show exit"
+      label: "settings"
       defaultValue: true
 
   - type: checkbox
     attributes:
       name: show_help_clear
-      label: "show clear"
+      label: "clear"
+      defaultValue: true
+
+  - type: checkbox
+    attributes:
+      name: show_help_restart
+      label: "restart"
+      defaultValue: true
+
+  - type: checkbox
+    attributes:
+      name: show_help_exit
+      label: "exit"
       defaultValue: true
 
   - type: input
@@ -58,12 +63,12 @@ body:
     attributes:
       name: blacklisted_app_ids
       label: "hidden apps"
-      description: "comma separated list of app ids to hide\ne.g. 730 = cs2"
-      defaultValue: "730"
+      description: "comma separated list of app ids to hide\n[def: steamw. comm. redis. (228980)]"
+      defaultValue: "228980"
 
   - type: checkbox
     attributes:
       name: enable_perf_logging
-      label: "[debug] enable performance logging"
-      description: "log slow query stages & network calls to plugin_steamflow.log"
+      label: "[debug] enable perf logging"
+      description: "log slow query stages & network calls to `plugin_steamflow.log`"
       defaultValue: false
