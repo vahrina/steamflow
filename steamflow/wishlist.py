@@ -74,7 +74,8 @@ class SteamPluginWishlistMixin:
             "https://api.steampowered.com/IWishlistService/GetWishlist/v1/"
             f"?key={api_key}&steamid={steamid64}"
         )
-        response = self._http_get(api_url, timeout=timeout, headers={"User-Agent": "Mozilla/5.0"})
+        response = self._http_get(api_url, timeout=timeout, headers={
+                                  "User-Agent": "Mozilla/5.0"})
         data = json.loads(response.data.decode("utf-8"))
         items = data.get("response", {}).get("items", [])
         if not isinstance(items, list):
@@ -163,7 +164,8 @@ class SteamPluginWishlistMixin:
                 return
             self.pending_wishlist_refresh = True
 
-        threading.Thread(target=self._refresh_wishlist_worker, daemon=True).start()
+        threading.Thread(target=self._refresh_wishlist_worker,
+                         daemon=True).start()
 
     def refresh_wishlist(self):
         if not self.has_owned_api_key() or not self.is_owned_api_key_bound_to_active_user():
@@ -177,7 +179,8 @@ class SteamPluginWishlistMixin:
         with self.state_lock:
             self.wishlist_last_attempt = time.time()
         try:
-            items = self.fetch_wishlist_items_from_api(api_key, steamid64, timeout=3)
+            items = self.fetch_wishlist_items_from_api(
+                api_key, steamid64, timeout=3)
         except Exception:
             self.log_exception("Failed to fetch Steam wishlist")
             self.save_wishlist_cache()
@@ -215,7 +218,8 @@ class SteamPluginWishlistMixin:
         with self.state_lock:
             self.wishlist_last_attempt = time.time()
         try:
-            items = self.fetch_wishlist_items_from_api(api_key, steamid64, timeout=3)
+            items = self.fetch_wishlist_items_from_api(
+                api_key, steamid64, timeout=3)
         except Exception as error:
             self.log_exception("Failed to fetch Steam wishlist")
             if cached_steamid64 == steamid64 and cached_items:
@@ -243,7 +247,8 @@ class SteamPluginWishlistMixin:
         parts = []
 
         if coming_soon:
-            release_text = str(metadata.get("release_date_text", "") or "").strip()
+            release_text = str(metadata.get(
+                "release_date_text", "") or "").strip()
             if release_text and release_text.lower() not in self.RELEASE_DATE_PLACEHOLDER_VALUES:
                 parts.append(f"coming soon: {release_text}")
             else:
@@ -255,14 +260,17 @@ class SteamPluginWishlistMixin:
             elif has_price:
                 price_info = metadata.get("price")
                 if price_info and "final" in price_info:
-                    price_str = util_currency.format_price(price_info["final"], self.get_country_code())
+                    price_str = util_currency.format_price(
+                        price_info["final"], self.get_country_code())
                     discount = self.format_discount_percent(price_info)
                     parts.append(f"{price_str}{discount}")
 
             # reviews
             if has_price or is_free:
-                review_summary = self.get_review_score(app_id, allow_network_on_miss=True)
-                review_str = self.format_review_score(review_summary).lstrip(" |")
+                review_summary = self.get_review_score(
+                    app_id, allow_network_on_miss=True)
+                review_str = self.format_review_score(
+                    review_summary).lstrip(" |")
                 if review_str:
                     parts.append(review_str)
 
@@ -270,7 +278,8 @@ class SteamPluginWishlistMixin:
 
     def build_wishlist_result(self, wishlist_item, allow_cold_detail_fetch=True):
         app_id = wishlist_item["appid"]
-        metadata = self.get_app_details_metadata(app_id, allow_network_on_miss=allow_cold_detail_fetch)
+        metadata = self.get_app_details_metadata(
+            app_id, allow_network_on_miss=allow_cold_detail_fetch)
         if not metadata or not metadata.get("name"):
             return None
 
@@ -280,7 +289,8 @@ class SteamPluginWishlistMixin:
         subtitle = self.build_wishlist_subtitle(metadata, app_id)
 
         return self.build_result(
-            title=f"\U0001F6D2 {name}",
+            # leading cart emoji: \U0001F6D2
+            title=f"{name}",
             subtitle=subtitle,
             icon_path=icon_path,
             context_data=self.build_context_data(
@@ -335,11 +345,13 @@ class SteamPluginWishlistMixin:
 
         sorted_items = sorted(
             wishlist_items,
-            key=lambda item: (-int(item.get("date_added", 0) or 0), item["appid"]),
+            key=lambda item: (-int(item.get("date_added", 0)
+                              or 0), item["appid"]),
         )
 
         for wishlist_item in sorted_items[: self.WISHLIST_COLD_DETAIL_FETCH_LIMIT]:
-            self.get_app_details_metadata(wishlist_item["appid"], allow_network_on_miss=True)
+            self.get_app_details_metadata(
+                wishlist_item["appid"], allow_network_on_miss=True)
 
         loaded_count = 0
         missing_items = []
@@ -347,14 +359,17 @@ class SteamPluginWishlistMixin:
         matching_loaded_count = 0
 
         for wishlist_item in sorted_items:
-            metadata = self.get_app_details_metadata(wishlist_item["appid"], allow_network_on_miss=False)
+            metadata = self.get_app_details_metadata(
+                wishlist_item["appid"], allow_network_on_miss=False)
             if metadata and metadata.get("name"):
                 loaded_count += 1
-                name_matches = not normalized_search or normalized_search in metadata["name"].lower()
+                name_matches = not normalized_search or normalized_search in metadata["name"].lower(
+                )
                 if name_matches:
                     matching_loaded_count += 1
                     if len(visible_results) < self.get_max_wishlist_results():
-                        result = self.build_wishlist_result(wishlist_item, allow_cold_detail_fetch=False)
+                        result = self.build_wishlist_result(
+                            wishlist_item, allow_cold_detail_fetch=False)
                         if result:
                             visible_results.append(result)
             else:
@@ -411,7 +426,8 @@ class SteamPluginWishlistMixin:
             }
         return self.build_result(
             title="wishlist unavailable",
-            subtitle=subtitle_by_reason.get(reason, str(reason or "couldn't load").lower()),
+            subtitle=subtitle_by_reason.get(
+                reason, str(reason or "couldn't load").lower()),
             icon_path=self.OWNED_ICON,
             action=action,
             Score=20500,

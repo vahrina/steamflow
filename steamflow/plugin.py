@@ -1,3 +1,16 @@
+from .wishlist import SteamPluginWishlistMixin
+from .ui_query import SteamPluginUIQueryMixin
+from .ui import SteamPluginUIMixin
+from .ui_commands import SteamPluginUICommandsMixin
+from .store_metrics import SteamPluginStoreMetricsMixin
+from .store import SteamPluginStoreMixin
+from .storage import SteamPluginStorageMixin
+from .profile import SteamPluginProfileMixin
+from .local import SteamPluginLocalMixin
+from .core import SteamPluginCoreMixin
+from .accounts import SteamPluginAccountsMixin
+from .actions import SteamPluginActionsMixin
+from flox import Flox
 import sys
 import threading
 from functools import cached_property
@@ -11,20 +24,6 @@ if str(PACKAGE_ROOT) not in sys.path:
 if str(LIB_PATH) not in sys.path:
     sys.path.insert(0, str(LIB_PATH))
 
-from flox import Flox
-
-from .actions import SteamPluginActionsMixin
-from .accounts import SteamPluginAccountsMixin
-from .core import SteamPluginCoreMixin
-from .local import SteamPluginLocalMixin
-from .profile import SteamPluginProfileMixin
-from .storage import SteamPluginStorageMixin
-from .store import SteamPluginStoreMixin
-from .store_metrics import SteamPluginStoreMetricsMixin
-from .ui_commands import SteamPluginUICommandsMixin
-from .ui import SteamPluginUIMixin
-from .ui_query import SteamPluginUIQueryMixin
-from .wishlist import SteamPluginWishlistMixin
 
 try:
     import certifi
@@ -163,16 +162,19 @@ class SteamPlugin(
         self.CLIPBOARD_ICON = str(self.plugin_dir / "icons" / "clipboard.png")
         self.COMMUNITY_ICON = str(self.plugin_dir / "icons" / "community.png")
         self.DOWNLOAD_ICON = str(self.plugin_dir / "icons" / "download.png")
-        self.DISCUSSIONS_ICON = str(self.plugin_dir / "icons" / "discussions.png")
+        self.DISCUSSIONS_ICON = str(
+            self.plugin_dir / "icons" / "discussions.png")
         self.GUIDES_ICON = str(self.plugin_dir / "icons" / "guides.png")
         self.LOCATION_ICON = str(self.plugin_dir / "icons" / "location.png")
         self.OWNED_ICON = str(self.plugin_dir / "icons" / "owned.png")
         self.ONLINE_ICON = str(self.plugin_dir / "icons" / "online.png")
         self.OFFLINE_ICON = str(self.plugin_dir / "icons" / "offline.png")
         self.INVISIBLE_ICON = str(self.plugin_dir / "icons" / "invisible.png")
-        self.PROPERTIES_ICON = str(self.plugin_dir / "icons" / "properties.png")
+        self.PROPERTIES_ICON = str(
+            self.plugin_dir / "icons" / "properties.png")
         self.REFUND_ICON = str(self.plugin_dir / "icons" / "refund.png")
-        self.SCREENSHOT_ICON = str(self.plugin_dir / "icons" / "screenshot.png")
+        self.SCREENSHOT_ICON = str(
+            self.plugin_dir / "icons" / "screenshot.png")
         self.SETTINGS_ICON = str(self.plugin_dir / "icons" / "settings.png")
         self.STEAMDB_ICON = str(self.plugin_dir / "icons" / "steamdb.png")
         self.TRASH_ICON = str(self.plugin_dir / "icons" / "trash.png")
@@ -231,7 +233,8 @@ class SteamPlugin(
             return
         import urllib3 as _urllib3
         self.urllib3 = _urllib3
-        self.http_pool = _urllib3.PoolManager(maxsize=8, retries=False, ca_certs=_CA_CERTS_PATH)
+        self.http_pool = _urllib3.PoolManager(
+            maxsize=8, retries=False, ca_certs=_CA_CERTS_PATH)
         self.installed_games = {}
         self.installed_game_paths = {}
         self.installed_game_statuses = {}
@@ -282,13 +285,16 @@ class SteamPlugin(
 
     def _initialize_steam_state(self):
         self.steam_path = self.get_steam_path()
-        self.country_code = self.load_cached_country_code() if self.should_show_prices() else "us"
+        self.country_code = self.load_cached_country_code(
+        ) if self.should_show_prices() else "us"
         self.localconfig_path = self.get_localconfig_path()
         self.hidden_collections_path = self.get_hidden_collections_path()
-        self.stats_cache_path = (self.steam_path / "appcache" / "stats") if self.steam_path else None
+        self.stats_cache_path = (
+            self.steam_path / "appcache" / "stats") if self.steam_path else None
         self.localconfig_mtime = 0
         self.hidden_games_mtime = 0
-        self.steam_icon_cache = (self.steam_path / "appcache" / "librarycache") if self.steam_path else None
+        self.steam_icon_cache = (
+            self.steam_path / "appcache" / "librarycache") if self.steam_path else None
         if self.load_installed_games_cache():
             self._start_installed_games_refresh()
         else:
@@ -300,7 +306,8 @@ class SteamPlugin(
         self.schedule_owned_games_refresh()
         self.schedule_active_profile_summary_refresh()
         self.schedule_wishlist_refresh()
-        threading.Thread(target=self._prewarm_wishlist_app_details, daemon=True).start()
+        threading.Thread(
+            target=self._prewarm_wishlist_app_details, daemon=True).start()
 
     def _prewarm_wishlist_app_details(self):
         try:
@@ -315,7 +322,8 @@ class SteamPlugin(
             for wishlist_item in items[: self.WISHLIST_COLD_DETAIL_FETCH_LIMIT]:
                 app_id = str(wishlist_item.get("appid", "")).strip()
                 if app_id:
-                    self.get_app_details_metadata(app_id, allow_network_on_miss=True)
+                    self.get_app_details_metadata(
+                        app_id, allow_network_on_miss=True)
         except Exception:
             self.log_exception("failed to prewarm wishlist app details")
 

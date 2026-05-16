@@ -1,11 +1,12 @@
 /lib
 /var
 /steamflow/__pycache__
-/asmr/
 /__pycache__
 /tests/__pycache__
 *.log
+*.torrent
+*.bundle
 *.apk
 /reels/
-*.bundle
-*.torrent
+/asmr/
+cache_img/
