@@ -48,7 +48,8 @@ class SteamPluginStoreMetricsMixin:
         if initial_price <= 0 or final_price < 0 or final_price >= initial_price:
             return ""
 
-        discount_percent = round(((initial_price - final_price) / initial_price) * 100)
+        discount_percent = round(
+            ((initial_price - final_price) / initial_price) * 100)
         if discount_percent <= 0:
             return ""
         return f" -{discount_percent}%"
@@ -73,7 +74,8 @@ class SteamPluginStoreMetricsMixin:
         return ""
 
     def should_show_release_date_text(self, game_data):
-        release_date_text = str(game_data.get("release_date_text", "") or "").strip()
+        release_date_text = str(game_data.get(
+            "release_date_text", "") or "").strip()
         if not release_date_text:
             return False
 
@@ -101,7 +103,8 @@ class SteamPluginStoreMetricsMixin:
             return None
 
         app_id = str(app_id)
-        cached_entry, is_fresh = self.get_cache_entry_state(cache, app_id, ttl_seconds)
+        cached_entry, is_fresh = self.get_cache_entry_state(
+            cache, app_id, ttl_seconds)
         if cached_entry and is_fresh:
             return cached_entry[value_key]
         if cached_entry:
@@ -117,11 +120,13 @@ class SteamPluginStoreMetricsMixin:
             response = self._http_get(image_url, timeout=2)
             with open(save_path, "wb") as out_file:
                 out_file.write(response.data)
-            self.log_slow_call("download_icon", (time.perf_counter() - start_time) * 1000, Path(save_path).name)
+            self.log_slow_call("download_icon", (time.perf_counter(
+            ) - start_time) * 1000, Path(save_path).name)
             return True
         except Exception:
             self.log_exception(f"Failed to download icon: {image_url}")
-            self.log_slow_call("download_icon", (time.perf_counter() - start_time) * 1000, image_url)
+            self.log_slow_call(
+                "download_icon", (time.perf_counter() - start_time) * 1000, image_url)
             return False
 
     def fetch_current_players(self, app_id):
@@ -133,16 +138,20 @@ class SteamPluginStoreMetricsMixin:
             data = json.loads(response.data.decode("utf-8"))
             if data.get("response", {}).get("result") == 1:
                 player_count = data["response"].get("player_count")
-                self.log_slow_call("get_current_players", (time.perf_counter() - start_time) * 1000, f"app_id={app_id}")
+                self.log_slow_call("get_current_players", (time.perf_counter(
+                ) - start_time) * 1000, f"app_id={app_id}")
                 return player_count
         except Exception:
-            self.log_exception(f"Failed to fetch player count for app {app_id}")
-        self.log_slow_call("get_current_players", (time.perf_counter() - start_time) * 1000, f"app_id={app_id}")
+            self.log_exception(
+                f"Failed to fetch player count for app {app_id}")
+        self.log_slow_call("get_current_players", (time.perf_counter(
+        ) - start_time) * 1000, f"app_id={app_id}")
         return None
 
     def _refresh_player_count_worker(self, app_id):
         try:
-            self.update_player_count_cache(app_id, self.fetch_current_players(app_id))
+            self.update_player_count_cache(
+                app_id, self.fetch_current_players(app_id))
         finally:
             self.finish_metric_refresh("pending_player_count_refresh", app_id)
 
@@ -181,20 +190,25 @@ class SteamPluginStoreMetricsMixin:
                 f"https://store.steampowered.com/appreviews/{app_id}"
                 "?json=1&language=all&purchase_type=all&num_per_page=0"
             )
-            response = self._http_get(api_url, timeout=1, headers={"User-Agent": "Mozilla/5.0"})
+            response = self._http_get(api_url, timeout=1, headers={
+                                      "User-Agent": "Mozilla/5.0"})
             data = json.loads(response.data.decode("utf-8"))
 
             summary = data.get("query_summary", data)
-            self.log_slow_call("get_review_score", (time.perf_counter() - start_time) * 1000, f"app_id={app_id}")
+            self.log_slow_call("get_review_score", (time.perf_counter(
+            ) - start_time) * 1000, f"app_id={app_id}")
             return summary
         except Exception:
-            self.log_exception(f"Failed to fetch review score for app {app_id}")
-        self.log_slow_call("get_review_score", (time.perf_counter() - start_time) * 1000, f"app_id={app_id}")
+            self.log_exception(
+                f"Failed to fetch review score for app {app_id}")
+        self.log_slow_call("get_review_score", (time.perf_counter(
+        ) - start_time) * 1000, f"app_id={app_id}")
         return None
 
     def _refresh_review_score_worker(self, app_id):
         try:
-            self.update_review_score_cache(app_id, self.fetch_review_score(app_id))
+            self.update_review_score_cache(
+                app_id, self.fetch_review_score(app_id))
         finally:
             self.finish_metric_refresh("pending_review_score_refresh", app_id)
 
@@ -227,7 +241,8 @@ class SteamPluginStoreMetricsMixin:
                 "https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/"
                 f"?key={api_key}&appid={app_id}&l=en"
             )
-            response = self._http_get(api_url, timeout=1.2, headers={"User-Agent": "Mozilla/5.0"})
+            response = self._http_get(api_url, timeout=1.2, headers={
+                                      "User-Agent": "Mozilla/5.0"})
             data = json.loads(response.data.decode("utf-8"))
             achievements = (
                 data.get("game", {})
@@ -235,12 +250,15 @@ class SteamPluginStoreMetricsMixin:
                 .get("achievements", [])
             )
             if isinstance(achievements, list):
-                self.log_slow_call("get_achievement_schema_total", (time.perf_counter() - start_time) * 1000, f"app_id={app_id}")
+                self.log_slow_call("get_achievement_schema_total", (time.perf_counter(
+                ) - start_time) * 1000, f"app_id={app_id}")
                 return len(achievements)
         except Exception:
-            self.log_exception(f"failed to fetch achievement schema for app {app_id}")
+            self.log_exception(
+                f"failed to fetch achievement schema for app {app_id}")
 
-        self.log_slow_call("get_achievement_schema_total", (time.perf_counter() - start_time) * 1000, f"app_id={app_id}")
+        self.log_slow_call("get_achievement_schema_total", (time.perf_counter(
+        ) - start_time) * 1000, f"app_id={app_id}")
         return None
 
     def fetch_player_achievement_progress(self, app_id, steamid64):
@@ -255,17 +273,22 @@ class SteamPluginStoreMetricsMixin:
                 "https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/"
                 f"?key={api_key}&steamid={steamid64}&appid={app_id}&l=en"
             )
-            response = self._http_get(api_url, timeout=1.2, headers={"User-Agent": "Mozilla/5.0"})
+            response = self._http_get(api_url, timeout=1.2, headers={
+                                      "User-Agent": "Mozilla/5.0"})
             data = json.loads(response.data.decode("utf-8"))
             achievements = data.get("playerstats", {}).get("achievements", [])
             if isinstance(achievements, list):
-                unlocked_count = sum(1 for achievement in achievements if achievement.get("achieved"))
-                self.log_slow_call("get_player_achievement_progress", (time.perf_counter() - start_time) * 1000, f"app_id={app_id}")
+                unlocked_count = sum(
+                    1 for achievement in achievements if achievement.get("achieved"))
+                self.log_slow_call("get_player_achievement_progress", (time.perf_counter(
+                ) - start_time) * 1000, f"app_id={app_id}")
                 return unlocked_count
         except Exception:
-            self.log_exception(f"failed to fetch player achievements ({app_id})")
+            self.log_exception(
+                f"failed to fetch player achievements ({app_id})")
 
-        self.log_slow_call("get_player_achievement_progress", (time.perf_counter() - start_time) * 1000, f"app_id={app_id}")
+        self.log_slow_call("get_player_achievement_progress",
+                           (time.perf_counter() - start_time) * 1000, f"app_id={app_id}")
         return None
 
     def update_achievement_schema_cache(self, app_id, total_count):
@@ -313,7 +336,8 @@ class SteamPluginStoreMetricsMixin:
         )
 
         total_count = schema_entry.get("total_count") if schema_entry else None
-        unlocked_count = progress_entry.get("unlocked_count") if progress_entry else None
+        unlocked_count = progress_entry.get(
+            "unlocked_count") if progress_entry else None
 
         if total_count is not None and unlocked_count is not None and schema_is_fresh and progress_is_fresh:
             return (unlocked_count, total_count)
@@ -330,10 +354,12 @@ class SteamPluginStoreMetricsMixin:
                 self.update_achievement_schema_cache(app_id, total_count)
 
         if unlocked_count is None or not progress_is_fresh:
-            fetched_unlocked_count = self.fetch_player_achievement_progress(app_id, steamid64)
+            fetched_unlocked_count = self.fetch_player_achievement_progress(
+                app_id, steamid64)
             if fetched_unlocked_count is not None:
                 unlocked_count = fetched_unlocked_count
-                self.update_achievement_progress_cache(app_id, steamid64, unlocked_count)
+                self.update_achievement_progress_cache(
+                    app_id, steamid64, unlocked_count)
 
         if total_count is None or unlocked_count is None:
             return None
@@ -353,7 +379,8 @@ class SteamPluginStoreMetricsMixin:
             return ""
 
         percentage = round((total_positive / total_reviews) * 100)
-        review_score_desc = str(review_summary.get("review_score_desc", "")).strip()
+        review_score_desc = str(review_summary.get(
+            "review_score_desc", "")).strip()
         if review_score_desc:
             return f" | {percentage}% ({review_score_desc})"
         return f" | {percentage}%"
@@ -378,7 +405,8 @@ class SteamPluginStoreMetricsMixin:
         app_id = game_data.get("id")
         name = game_data.get("name")
         is_owned = self.is_owned_app(app_id)
-        metadata = self.get_app_details_metadata(app_id, allow_network_on_miss=allow_cold_metric_fetch) if app_id else None
+        metadata = self.get_app_details_metadata(
+            app_id, allow_network_on_miss=allow_cold_metric_fetch) if app_id else None
 
         if metadata:
             name = metadata.get("name") or name
@@ -396,24 +424,31 @@ class SteamPluginStoreMetricsMixin:
             }
 
         image_url = game_data.get("tiny_image")
-        should_fetch_review = self.should_show_positive_reviews() and self.should_fetch_review_score(game_data)
-        should_fetch_players = self.should_show_player_count() and self.should_fetch_player_count(game_data)
-        should_fetch_achievements = is_owned and self.should_show_achievements() and self.has_owned_api_key()
+        should_fetch_review = self.should_show_positive_reviews(
+        ) and self.should_fetch_review_score(game_data)
+        should_fetch_players = self.should_show_player_count(
+        ) and self.should_fetch_player_count(game_data)
+        should_fetch_achievements = is_owned and self.should_show_achievements(
+        ) and self.has_owned_api_key()
 
         with ThreadPoolExecutor(max_workers=4) as executor:
-            icon_future = executor.submit(self._resolve_game_icon, app_id, image_url)
+            icon_future = executor.submit(
+                self._resolve_game_icon, app_id, image_url)
             review_future = (
-                executor.submit(self.get_review_score, app_id, allow_cold_metric_fetch)
+                executor.submit(self.get_review_score, app_id,
+                                allow_cold_metric_fetch)
                 if should_fetch_review
                 else None
             )
             players_future = (
-                executor.submit(self.get_current_players, app_id, allow_cold_metric_fetch)
+                executor.submit(self.get_current_players,
+                                app_id, allow_cold_metric_fetch)
                 if should_fetch_players
                 else None
             )
             achievements_future = (
-                executor.submit(self.get_owned_store_achievement_progress, app_id, allow_cold_metric_fetch)
+                executor.submit(
+                    self.get_owned_store_achievement_progress, app_id, allow_cold_metric_fetch)
                 if should_fetch_achievements
                 else None
             )
@@ -430,11 +465,14 @@ class SteamPluginStoreMetricsMixin:
         if should_fetch_review and not coming_soon and has_price:
             review_score_str = self.format_review_score(review_summary)
 
-        player_count_str = self.format_player_count(player_count) if should_fetch_players else ""
+        player_count_str = self.format_player_count(
+            player_count) if should_fetch_players else ""
         owned_playtime_str = ""
         if is_owned and self.should_show_playtime():
-            owned_playtime_str = self.format_owned_playtime(self.get_owned_game_playtime_minutes(app_id))
-        achievement_progress_str = self.format_store_achievement_progress(achievement_progress) if should_fetch_achievements else ""
+            owned_playtime_str = self.format_owned_playtime(
+                self.get_owned_game_playtime_minutes(app_id))
+        achievement_progress_str = self.format_store_achievement_progress(
+            achievement_progress) if should_fetch_achievements else ""
 
         # build subtitle per type
         if is_owned:
@@ -447,9 +485,11 @@ class SteamPluginStoreMetricsMixin:
             title_prefix = "\U0001F3AE"
         else:
             # unpurchased store result — price/date/reviews only
-            price_str = self.format_store_price_or_availability(game_data, is_owned=False)
+            price_str = self.format_store_price_or_availability(
+                game_data, is_owned=False)
             release_date_str = (
-                self.format_release_date_text(game_data.get("release_date_text"))
+                self.format_release_date_text(
+                    game_data.get("release_date_text"))
                 if self.should_show_release_date_text(game_data)
                 else ""
             )
@@ -461,7 +501,8 @@ class SteamPluginStoreMetricsMixin:
                     subtitle = release_date_str.lstrip(" |")
             action_method = "open_steam_store_page"
             title_marker = ""
-            title_prefix = "\U0001F6D2"
+            title_prefix = ""
+            # title_prefix = "\U0001F6D2"
 
         return self.build_result(
             title=f"{title_prefix} {name}{title_marker}",
@@ -503,7 +544,8 @@ class SteamPluginStoreMetricsMixin:
 
             for future in as_completed(future_to_index):
                 try:
-                    processed_results[future_to_index[future]] = future.result()
+                    processed_results[future_to_index[future]
+                                      ] = future.result()
                 except Exception:
                     self.log_exception("failed to process store result")
 

@@ -19,7 +19,7 @@ class SteamPluginUIMixin:
         subtitle = str(account_label).lower()
         profile_status = self.get_active_profile_status()
         if profile_status:
-            subtitle += f" | {str(profile_status).lower()}"
+            subtitle += f" {str(profile_status).lower()}"
         return subtitle
 
     def get_launch_steam_result_subtitle(self):
@@ -31,17 +31,18 @@ class SteamPluginUIMixin:
         if playtime_minutes is None:
             return ""
         if playtime_minutes < 60:
-            return f" | {playtime_minutes}m"
+            return f" {playtime_minutes}m"
         hours = playtime_minutes / 60
-        return f" | {hours:.1f}h"
+        return f" {hours:.1f}h"
 
     def format_last_played(self, last_played_timestamp):
         if not last_played_timestamp:
             return ""
-        played_on = util_steam_date.format_steam_last_played(last_played_timestamp)
+        played_on = util_steam_date.format_steam_last_played(
+            last_played_timestamp)
         if not played_on:
             return ""
-        return f" | last played: {played_on}"
+        return f" {played_on}"
 
     def format_achievement_progress(self, app_id):
         if not self.should_show_achievements():
@@ -54,12 +55,13 @@ class SteamPluginUIMixin:
             return ""
         if unlocked_count <= 0 and not self.has_current_account_local_data(app_id):
             return ""
-        return f" | {unlocked_count}/{total_count}"
+        return f" {unlocked_count}/{total_count}"
 
     def get_platform_suffix(self, platforms):
         if not self.should_show_platforms():
             return ""
-        labels = [label for key, label in self.PLATFORM_LABELS.items() if platforms.get(key)]
+        labels = [label for key, label in self.PLATFORM_LABELS.items()
+                  if platforms.get(key)]
         if not labels:
             return ""
         return f" ({'/'.join(labels)})"
@@ -103,10 +105,10 @@ class SteamPluginUIMixin:
         )
 
     UPDATE_STATUS_MARKERS = {
-        "Updating": " ⬇",
-        "Update Paused": " ⏸",
-        "Update Queued": " ⏳",
-        "Update Required": " ⚠",
+        "Updating": " vv",
+        "Update Paused": " ||",
+        "Update Queued": " ??",
+        "Update Required": " !!",
     }
 
     def should_prefetch_refund_state(self, app_id):
@@ -123,7 +125,7 @@ class SteamPluginUIMixin:
         refund_state=None,
     ):
         status_label = self.get_installed_game_status(app_id)
-        title_marker = self.UPDATE_STATUS_MARKERS.get(status_label, " ▶")
+        title_marker = self.UPDATE_STATUS_MARKERS.get(status_label, "")
 
         # subtitle: metrics only, no "installed" prefix
         subtitle_parts = []
@@ -135,7 +137,8 @@ class SteamPluginUIMixin:
         if ach:
             subtitle_parts.append(ach.lstrip(" |"))
         if self.should_show_last_played():
-            lp = self.format_last_played(self.get_last_played_timestamp(app_id))
+            lp = self.format_last_played(
+                self.get_last_played_timestamp(app_id))
             if lp:
                 subtitle_parts.append(lp.lstrip(" |"))
         notice = self.get_local_game_account_notice(app_id)
@@ -150,17 +153,20 @@ class SteamPluginUIMixin:
             if pc:
                 subtitle_parts.append(pc.lstrip(" |"))
 
-        subtitle = " | ".join(subtitle_parts)
+        subtitle = " · ".join(subtitle_parts)
 
         if self.should_prefetch_refund_state(app_id):
             self.get_app_details_metadata(app_id, allow_network_on_miss=False)
         if refund_state is None:
-            refund_state = self.get_refund_state_for_local_game(app_id, allow_network_on_miss=False)
+            refund_state = self.get_refund_state_for_local_game(
+                app_id, allow_network_on_miss=False)
         playtime_minutes = self.get_playtime_minutes(app_id)
-        has_current_account_local_data = self.has_current_account_local_data(app_id)
+        has_current_account_local_data = self.has_current_account_local_data(
+            app_id)
 
         return self.build_result(
-            title=f"\U0001F3AE {name}{title_marker}",
+            # leading controller emoji: \U0001F3AE
+            title=f"{name}{title_marker}",
             subtitle=subtitle,
             icon_path=self.get_local_game_icon(app_id),
             context_data=self.build_context_data(
@@ -198,7 +204,8 @@ class SteamPluginUIMixin:
         ]
 
     def get_context_menu_items(self, app_id, name, install_path, is_owned=False, refund_state=""):
-        cache_key = (str(app_id or ""), name, install_path or "", bool(is_owned), str(refund_state or ""))
+        cache_key = (str(app_id or ""), name, install_path or "",
+                     bool(is_owned), str(refund_state or ""))
         with self.state_lock:
             cached_items = self.context_menu_cache.get(cache_key)
         if cached_items is not None:
@@ -247,7 +254,8 @@ class SteamPluginUIMixin:
 
         app_id = str(data.get("app_id", ""))
         name = data.get("name", "Game")
-        install_path = data.get("install_path") or self.get_install_path(app_id)
+        install_path = data.get(
+            "install_path") or self.get_install_path(app_id)
         is_owned = bool(data.get("is_owned"))
         refund_state = str(data.get("refund_state", "") or "")
 
@@ -264,5 +272,6 @@ class SteamPluginUIMixin:
                 subprocess.run(["start", uri], shell=True)
                 return "Game launched"
             except Exception:
-                self.log("error", f"Failed to launch game {app_id}: {original_error}")
+                self.log(
+                    "error", f"Failed to launch game {app_id}: {original_error}")
                 return f"Failed to launch game: {str(original_error)}"

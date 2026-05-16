@@ -9,7 +9,8 @@ class SteamPluginUIQueryMixin:
         for app_id, name in self.get_installed_games_items():
             if search_lower in name.lower():
                 matches.append((app_id, name))
-        matches.sort(key=lambda item: (item[1].lower().find(search_lower), len(item[1])))
+        matches.sort(key=lambda item: (
+            item[1].lower().find(search_lower), len(item[1])))
         return matches[: self.get_max_local_results()]
 
     def get_empty_query_local_games(self):
@@ -135,7 +136,8 @@ class SteamPluginUIQueryMixin:
 
         stage_start_time = time.perf_counter()
         self.refresh_user_scoped_local_state_if_needed()
-        self.mark_timing(timings, "refresh_user_scoped_local_state_if_needed", stage_start_time)
+        self.mark_timing(
+            timings, "refresh_user_scoped_local_state_if_needed", stage_start_time)
 
         stage_start_time = time.perf_counter()
         self.update_installed_games()
@@ -151,11 +153,14 @@ class SteamPluginUIQueryMixin:
             if active_steam:
                 stage_start_time = time.perf_counter()
                 games_to_show = self.get_empty_query_local_games()
-                self.mark_timing(timings, "collect_empty_local_games", stage_start_time)
+                self.mark_timing(
+                    timings, "collect_empty_local_games", stage_start_time)
 
                 stage_start_time = time.perf_counter()
-                results.extend(self.process_local_results(games_to_show, include_player_count=False))
-                self.mark_timing(timings, "process_empty_local_results", stage_start_time)
+                results.extend(self.process_local_results(
+                    games_to_show, include_player_count=False))
+                self.mark_timing(
+                    timings, "process_empty_local_results", stage_start_time)
                 if len(results) == 1:
                     results.append(self.build_empty_state_result())
             else:
@@ -185,15 +190,19 @@ class SteamPluginUIQueryMixin:
             else:
                 stage_start_time = time.perf_counter()
                 local_matches = self.collect_local_matches(search_term)
-                self.mark_timing(timings, "collect_local_matches", stage_start_time)
+                self.mark_timing(
+                    timings, "collect_local_matches", stage_start_time)
 
                 stage_start_time = time.perf_counter()
-                local_results = self.process_local_results(local_matches, include_player_count=True)
-                self.mark_timing(timings, "process_local_results", stage_start_time)
+                local_results = self.process_local_results(
+                    local_matches, include_player_count=True)
+                self.mark_timing(
+                    timings, "process_local_results", stage_start_time)
 
                 stage_start_time = time.perf_counter()
                 local_app_ids = {str(app_id) for app_id, _ in local_matches}
-                self.mark_timing(timings, "build_local_app_ids", stage_start_time)
+                self.mark_timing(
+                    timings, "build_local_app_ids", stage_start_time)
 
                 stage_start_time = time.perf_counter()
                 search_result = self.search_steam_api(search_term)
@@ -204,16 +213,21 @@ class SteamPluginUIQueryMixin:
                     search_result["games"],
                     skipped_app_ids=local_app_ids,
                 )
-                self.mark_timing(timings, "process_store_results", stage_start_time)
+                self.mark_timing(
+                    timings, "process_store_results", stage_start_time)
 
                 stage_start_time = time.perf_counter()
-                results = self.merge_search_results(local_matches, local_results, store_results)
-                self.mark_timing(timings, "merge_search_results", stage_start_time)
+                results = self.merge_search_results(
+                    local_matches, local_results, store_results)
+                self.mark_timing(
+                    timings, "merge_search_results", stage_start_time)
                 if not results:
                     if search_result["error"]:
-                        results.append(self.build_search_error_result(search_term, search_result["error"]))
+                        results.append(self.build_search_error_result(
+                            search_term, search_result["error"]))
                     else:
-                        results.append(self.build_empty_state_result(search_term))
+                        results.append(
+                            self.build_empty_state_result(search_term))
 
         stage_start_time = time.perf_counter()
         for result in results:

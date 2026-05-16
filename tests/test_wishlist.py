@@ -1,3 +1,7 @@
+from steamflow.wishlist import SteamPluginWishlistMixin
+from steamflow.ui_commands import SteamPluginUICommandsMixin
+from steamflow.storage import SteamPluginStorageMixin
+from tests._flox_stub import install_flox_stub
 import json
 import sys
 import threading
@@ -12,13 +16,8 @@ if str(PROJECT_ROOT) not in sys.path:
 if str(LIB_PATH) not in sys.path:
     sys.path.insert(0, str(LIB_PATH))
 
-from tests._flox_stub import install_flox_stub
 
 install_flox_stub(include_clipboard=True)
-
-from steamflow.storage import SteamPluginStorageMixin
-from steamflow.ui_commands import SteamPluginUICommandsMixin
-from steamflow.wishlist import SteamPluginWishlistMixin
 
 
 class WishlistHarness(SteamPluginWishlistMixin, SteamPluginStorageMixin, SteamPluginUICommandsMixin):
@@ -99,13 +98,17 @@ class WishlistHarness(SteamPluginWishlistMixin, SteamPluginStorageMixin, SteamPl
         return {"method": method, "parameters": list(parameters)}
 
     def build_plugin_query(self, *parts):
-        plugin_settings = self.app_settings.get("PluginSettings", {}).get("Plugins", {}).get(self.id, {})
-        keywords = plugin_settings.get("UserKeywords") or plugin_settings.get("ActionKeywords") or []
+        plugin_settings = self.app_settings.get(
+            "PluginSettings", {}).get("Plugins", {}).get(self.id, {})
+        keywords = plugin_settings.get(
+            "UserKeywords") or plugin_settings.get("ActionKeywords") or []
         if isinstance(keywords, list) and keywords:
-            keyword = str(keywords[0] or "").strip() or str(self.user_keyword or "steam").strip()
+            keyword = str(keywords[0] or "").strip() or str(
+                self.user_keyword or "steam").strip()
         else:
             keyword = str(self.user_keyword or "steam").strip()
-        suffix = " ".join(str(part).strip() for part in parts if str(part).strip())
+        suffix = " ".join(str(part).strip()
+                          for part in parts if str(part).strip())
         return f"{keyword} {suffix}".strip()
 
     def build_context_data(
@@ -142,7 +145,8 @@ class WishlistTests(unittest.TestCase):
         self.assertTrue(harness.is_wishlist_query("wishlist"))
         self.assertTrue(harness.is_wishlist_query("wish list"))
         self.assertTrue(harness.is_wishlist_query("wishlist foo"))
-        self.assertEqual(harness.get_wishlist_query_text("wishlist final fantasy"), "final fantasy")
+        self.assertEqual(harness.get_wishlist_query_text(
+            "wishlist final fantasy"), "final fantasy")
 
     def test_load_wishlist_cache_restores_items(self):
         with TemporaryDirectory() as temp_dir:
@@ -213,7 +217,8 @@ class WishlistTests(unittest.TestCase):
 
             results = harness.build_wishlist_results("final")
 
-            self.assertEqual(results[0]["Title"], "Syncing Steam Wishlist For 'final'")
+            self.assertEqual(results[0]["Title"],
+                             "Syncing Steam Wishlist For 'final'")
 
     def test_build_wishlist_results_uses_unavailable_result_without_api_key(self):
         with TemporaryDirectory() as temp_dir:
@@ -255,19 +260,22 @@ class WishlistTests(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             harness = WishlistHarness(temp_dir)
             harness.user_keyword = "steam"
-            harness.app_settings["PluginSettings"]["Plugins"][harness.id] = {"ActionKeywords": ["st"]}
+            harness.app_settings["PluginSettings"]["Plugins"][harness.id] = {
+                "ActionKeywords": ["st"]}
             harness.owned_api_key_present = False
 
             results = harness.build_wishlist_results()
 
             self.assertIn("`st api`", results[0]["SubTitle"])
-            self.assertEqual(results[0]["action"]["parameters"], ["st api", True])
+            self.assertEqual(results[0]["action"]
+                             ["parameters"], ["st api", True])
 
     def test_build_wishlist_unavailable_result_without_active_account_has_no_redirect(self):
         with TemporaryDirectory() as temp_dir:
             harness = WishlistHarness(temp_dir)
 
-            result = harness.build_wishlist_unavailable_result("No active Steam account found")
+            result = harness.build_wishlist_unavailable_result(
+                "No active Steam account found")
 
             self.assertIsNone(result["action"])
 
@@ -275,7 +283,8 @@ class WishlistTests(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             harness = WishlistHarness(temp_dir)
             harness.wishlist_cache_loaded = True
-            harness.wishlist_items = [{"appid": "10", "date_added": 100, "priority": 0}]
+            harness.wishlist_items = [
+                {"appid": "10", "date_added": 100, "priority": 0}]
             harness.wishlist_steamid64 = harness.active_steamid64
             harness.wishlist_last_sync = 1
 

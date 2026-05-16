@@ -135,7 +135,8 @@ class SteamContextMenuPlugin(SteamPluginActionsMixin, Flox):
         metadata = self.get_cached_app_details_metadata(app_id)
         if not metadata:
             metadata = self.fetch_app_details_metadata(app_id)
-            self._write_app_details_cache_entry(app_id, metadata, success=metadata is not None)
+            self._write_app_details_cache_entry(
+                app_id, metadata, success=metadata is not None)
         if not metadata:
             return False
         return bool(metadata.get("coming_soon"))
@@ -154,7 +155,8 @@ class SteamContextMenuPlugin(SteamPluginActionsMixin, Flox):
 
         playtime_minutes = data.get("playtime_minutes")
         try:
-            playtime_minutes = int(playtime_minutes) if playtime_minutes is not None else None
+            playtime_minutes = int(
+                playtime_minutes) if playtime_minutes is not None else None
         except (TypeError, ValueError):
             playtime_minutes = None
 
@@ -164,7 +166,8 @@ class SteamContextMenuPlugin(SteamPluginActionsMixin, Flox):
         metadata = self.get_cached_app_details_metadata(app_id)
         if not metadata:
             metadata = self.fetch_app_details_metadata(app_id)
-            self._write_app_details_cache_entry(app_id, metadata, success=metadata is not None)
+            self._write_app_details_cache_entry(
+                app_id, metadata, success=metadata is not None)
         if not metadata:
             return ""
         if metadata.get("type") != "game" or metadata.get("is_free") is not False:
@@ -182,13 +185,16 @@ class SteamContextMenuPlugin(SteamPluginActionsMixin, Flox):
         self._steam_path = UNSET
         self.community_icon = str(self.plugin_dir / "icons" / "community.png")
         self.default_icon = str(self.plugin_dir / "icons" / "steam.png")
-        self.discussions_icon = str(self.plugin_dir / "icons" / "discussions.png")
+        self.discussions_icon = str(
+            self.plugin_dir / "icons" / "discussions.png")
         self.download_icon = str(self.plugin_dir / "icons" / "download.png")
         self.guides_icon = str(self.plugin_dir / "icons" / "guides.png")
         self.location_icon = str(self.plugin_dir / "icons" / "location.png")
-        self.properties_icon = str(self.plugin_dir / "icons" / "properties.png")
+        self.properties_icon = str(
+            self.plugin_dir / "icons" / "properties.png")
         self.refund_icon = str(self.plugin_dir / "icons" / "refund.png")
-        self.screenshot_icon = str(self.plugin_dir / "icons" / "screenshot.png")
+        self.screenshot_icon = str(
+            self.plugin_dir / "icons" / "screenshot.png")
         self.settings_icon = str(self.plugin_dir / "icons" / "settings.png")
         self.steamdb_icon = str(self.plugin_dir / "icons" / "steamdb.png")
         self.trash_icon = str(self.plugin_dir / "icons" / "trash.png")

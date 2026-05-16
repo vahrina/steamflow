@@ -20,16 +20,19 @@ class SteamPluginStoreMixin:
         try:
             country_code = self.get_country_code() if self.should_show_prices() else "us"
             api_url = f"https://store.steampowered.com/api/appdetails?appids={app_id}&cc={country_code}&l=en"
-            response = self._http_get(api_url, timeout=1.5, headers={"User-Agent": "Mozilla/5.0"})
+            response = self._http_get(api_url, timeout=1.5, headers={
+                                      "User-Agent": "Mozilla/5.0"})
             data = json.loads(response.data.decode("utf-8"))
             app_details = data.get(app_id, {})
             if not isinstance(app_details, dict) or not app_details.get("success"):
-                self.log_slow_call("fetch_app_details_metadata", (time.perf_counter() - start_time) * 1000, f"app_id={app_id} success=false")
+                self.log_slow_call("fetch_app_details_metadata", (time.perf_counter(
+                ) - start_time) * 1000, f"app_id={app_id} success=false")
                 return None
 
             details = app_details.get("data", {})
             if not isinstance(details, dict):
-                self.log_slow_call("fetch_app_details_metadata", (time.perf_counter() - start_time) * 1000, f"app_id={app_id} invalid-data")
+                self.log_slow_call("fetch_app_details_metadata", (time.perf_counter(
+                ) - start_time) * 1000, f"app_id={app_id} invalid-data")
                 return None
 
             raw_is_free = details.get("is_free")
@@ -51,17 +54,20 @@ class SteamPluginStoreMixin:
                 "coming_soon": bool((details.get("release_date") or {}).get("coming_soon")),
                 "release_date_text": str((details.get("release_date") or {}).get("date", "") or "").strip(),
             }
-            self.log_slow_call("fetch_app_details_metadata", (time.perf_counter() - start_time) * 1000, f"app_id={app_id}")
+            self.log_slow_call("fetch_app_details_metadata", (time.perf_counter(
+            ) - start_time) * 1000, f"app_id={app_id}")
             return metadata
         except Exception:
             self.log_exception(f"Failed to fetch app details for app {app_id}")
-            self.log_slow_call("fetch_app_details_metadata", (time.perf_counter() - start_time) * 1000, f"app_id={app_id}")
+            self.log_slow_call("fetch_app_details_metadata", (time.perf_counter(
+            ) - start_time) * 1000, f"app_id={app_id}")
             return None
 
     def _refresh_app_details_worker(self, app_id):
         try:
             metadata = self.fetch_app_details_metadata(app_id)
-            self.update_app_details_cache(app_id, metadata, success=metadata is not None)
+            self.update_app_details_cache(
+                app_id, metadata, success=metadata is not None)
         finally:
             self.finish_metric_refresh("pending_app_details_refresh", app_id)
 
@@ -79,23 +85,29 @@ class SteamPluginStoreMixin:
                 if cached_entry.get("success")
                 else self.APP_DETAILS_FAILURE_CACHE_TTL_SECONDS
             )
-            is_fresh = (time.time() - cached_entry.get("timestamp", 0)) < ttl_seconds
-            metadata = cached_entry.get("metadata") if cached_entry.get("success") else None
+            is_fresh = (
+                time.time() - cached_entry.get("timestamp", 0)) < ttl_seconds
+            metadata = cached_entry.get(
+                "metadata") if cached_entry.get("success") else None
             if is_fresh:
                 return metadata
-            self.start_metric_refresh("pending_app_details_refresh", app_id, self._refresh_app_details_worker)
+            self.start_metric_refresh(
+                "pending_app_details_refresh", app_id, self._refresh_app_details_worker)
             return metadata
 
         if not allow_network_on_miss:
-            self.start_metric_refresh("pending_app_details_refresh", app_id, self._refresh_app_details_worker)
+            self.start_metric_refresh(
+                "pending_app_details_refresh", app_id, self._refresh_app_details_worker)
             return None
 
         metadata = self.fetch_app_details_metadata(app_id)
-        self.update_app_details_cache(app_id, metadata, success=metadata is not None)
+        self.update_app_details_cache(
+            app_id, metadata, success=metadata is not None)
         return metadata
 
     def is_paid_base_game(self, app_id, allow_network_on_miss=True):
-        metadata = self.get_app_details_metadata(app_id, allow_network_on_miss=allow_network_on_miss)
+        metadata = self.get_app_details_metadata(
+            app_id, allow_network_on_miss=allow_network_on_miss)
         if not metadata:
             return False
         return metadata.get("type") == "game" and metadata.get("is_free") is False
@@ -124,7 +136,8 @@ class SteamPluginStoreMixin:
 
             encoded_term = urllib.parse.quote(search_term)
             api_url = f"https://store.steampowered.com/api/storesearch/?term={encoded_term}&cc={country_code}&l=en"
-            response = self._http_get(api_url, timeout=0.7, headers={"User-Agent": "Mozilla/5.0"})
+            response = self._http_get(api_url, timeout=0.7, headers={
+                                      "User-Agent": "Mozilla/5.0"})
             data = json.loads(response.data.decode("utf-8"))
 
             blacklist = self.get_blacklisted_app_ids()
@@ -148,10 +161,14 @@ class SteamPluginStoreMixin:
                     )
 
             with self.state_lock:
-                self.search_cache[cache_key] = {"timestamp": time.time(), "games": games}
-            self.log_slow_call("search_steam_api", (time.perf_counter() - start_time) * 1000, f"query='{search_term}'")
+                self.search_cache[cache_key] = {
+                    "timestamp": time.time(), "games": games}
+            self.log_slow_call("search_steam_api", (time.perf_counter(
+            ) - start_time) * 1000, f"query='{search_term}'")
             return {"games": games, "error": None}
         except Exception as error:
-            self.log_exception(f"Steam search request failed for query: {search_term}")
-            self.log_slow_call("search_steam_api", (time.perf_counter() - start_time) * 1000, f"query='{search_term}'")
+            self.log_exception(
+                f"Steam search request failed for query: {search_term}")
+            self.log_slow_call("search_steam_api", (time.perf_counter(
+            ) - start_time) * 1000, f"query='{search_term}'")
             return {"games": [], "error": self.get_search_error_message(error)}
