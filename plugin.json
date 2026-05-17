@@ -4,7 +4,7 @@
   "Name": "steamflow",
   "Description": "search the store, browse your library & much more!",
   "Author": "vahrina",
-  "Version": "0.1",
+  "Version": "0.3",
   "Language": "python",
   "Website": "https://github.com/vahrina/SteamFlow",
   "IcoPath": "icons/steam.png",
