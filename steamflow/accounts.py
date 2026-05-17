@@ -60,7 +60,8 @@ class SteamPluginAccountsMixin:
         return copy.deepcopy(normalized)
 
     def load_loginusers_data(self):
-        paths_to_try = [self.get_loginusers_path(), self.get_loginusers_backup_path()]
+        paths_to_try = [self.get_loginusers_path(
+        ), self.get_loginusers_backup_path()]
         parse_failed = False
         for candidate_path in paths_to_try:
             if not candidate_path or not candidate_path.exists():
@@ -71,7 +72,8 @@ class SteamPluginAccountsMixin:
             except OSError:
                 current_mtime = 0
 
-            cached_data = self._get_cached_loginusers_data(candidate_path, current_mtime)
+            cached_data = self._get_cached_loginusers_data(
+                candidate_path, current_mtime)
             if cached_data is not None:
                 return cached_data
 
@@ -111,7 +113,8 @@ class SteamPluginAccountsMixin:
     def get_steam_account_avatar_path(self, steamid64):
         if not self.steam_path or not steamid64:
             return None
-        avatar_path = self.steam_path / "config" / "avatarcache" / f"{steamid64}.png"
+        avatar_path = self.steam_path / "config" / \
+            "avatarcache" / f"{steamid64}.png"
         if avatar_path.exists():
             return avatar_path
         return None
@@ -137,7 +140,8 @@ class SteamPluginAccountsMixin:
             if not steamid64.isdigit():
                 continue
 
-            user_data = raw_user_data if isinstance(raw_user_data, dict) else {}
+            user_data = raw_user_data if isinstance(
+                raw_user_data, dict) else {}
             avatar_path = self.get_steam_account_avatar_path(steamid64)
             try:
                 timestamp = int(user_data.get("Timestamp", 0) or 0)
@@ -178,7 +182,8 @@ class SteamPluginAccountsMixin:
         show_msg = getattr(self, "show_msg", None)
         if callable(show_msg):
             try:
-                show_msg("switch failed", str(message or ""), self.DEFAULT_ICON)
+                show_msg("switch failed", str(
+                    message or ""), self.DEFAULT_ICON)
             except Exception:
                 pass
 
@@ -193,7 +198,8 @@ class SteamPluginAccountsMixin:
             return None
 
         for current_steamid64, raw_user_data in list(users.items()):
-            user_data = raw_user_data if isinstance(raw_user_data, dict) else {}
+            user_data = raw_user_data if isinstance(
+                raw_user_data, dict) else {}
             user_data["MostRecent"] = "1" if current_steamid64 == target_steamid64 else "0"
             if current_steamid64 == target_steamid64:
                 user_data["AllowAutoLogin"] = "1"
@@ -206,7 +212,8 @@ class SteamPluginAccountsMixin:
 
     def set_steam_registry_autologin_user(self, account_name):
         with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam") as key:
-            winreg.SetValueEx(key, "AutoLoginUser", 0, winreg.REG_SZ, str(account_name or ""))
+            winreg.SetValueEx(key, "AutoLoginUser", 0,
+                              winreg.REG_SZ, str(account_name or ""))
             winreg.SetValueEx(key, "RememberPassword", 0, winreg.REG_DWORD, 1)
 
     def _is_windows_process_running(self, image_name):
@@ -216,7 +223,8 @@ class SteamPluginAccountsMixin:
             text=True,
             timeout=10,
         )
-        combined_output = " ".join(filter(None, [result.stdout, result.stderr])).lower()
+        combined_output = " ".join(
+            filter(None, [result.stdout, result.stderr])).lower()
         return image_name.lower() in combined_output
 
     def terminate_steam_processes(self):
@@ -229,9 +237,11 @@ class SteamPluginAccountsMixin:
                 text=True,
                 timeout=20,
             )
-            output_text = " ".join(filter(None, [result.stdout, result.stderr])).strip()
+            output_text = " ".join(
+                filter(None, [result.stdout, result.stderr])).strip()
             if self._is_windows_process_running(image_name):
-                raise RuntimeError(output_text or f"taskkill exited with code {result.returncode}")
+                raise RuntimeError(
+                    output_text or f"taskkill exited with code {result.returncode}")
 
         deadline = time.time() + 10
         while time.time() < deadline:
@@ -245,7 +255,8 @@ class SteamPluginAccountsMixin:
             if self._is_windows_process_running(image_name)
         ]
         if remaining_processes:
-            raise RuntimeError(f"steam processes still running: {', '.join(remaining_processes)}")
+            raise RuntimeError(
+                f"steam processes still running: {', '.join(remaining_processes)}")
 
     def terminate_steam_client(self):
         if not self._is_windows_process_running("steam.exe"):
@@ -256,9 +267,11 @@ class SteamPluginAccountsMixin:
             text=True,
             timeout=20,
         )
-        output_text = " ".join(filter(None, [result.stdout, result.stderr])).strip()
+        output_text = " ".join(
+            filter(None, [result.stdout, result.stderr])).strip()
         if self._is_windows_process_running("steam.exe"):
-            raise RuntimeError(output_text or f"taskkill exited with code {result.returncode}")
+            raise RuntimeError(
+                output_text or f"taskkill exited with code {result.returncode}")
 
     def launch_steam_client_executable(self):
         if not self.steam_path:
@@ -268,7 +281,8 @@ class SteamPluginAccountsMixin:
 
         steam_exe = self.steam_path / "steam.exe"
         if not steam_exe.exists():
-            raise FileNotFoundError(f"steam executable not found at {steam_exe}")
+            raise FileNotFoundError(
+                f"steam executable not found at {steam_exe}")
 
         try:
             subprocess.Popen([str(steam_exe)], cwd=str(self.steam_path))
@@ -278,7 +292,8 @@ class SteamPluginAccountsMixin:
     def start_steam_switch_worker(self, steamid64):
         worker_script = self.plugin_dir / "steam_switch_worker.py"
         if not worker_script.exists():
-            raise FileNotFoundError(f"switch worker not found at {worker_script}")
+            raise FileNotFoundError(
+                f"switch worker not found at {worker_script}")
 
         startupinfo = None
         creationflags = 0
@@ -293,7 +308,8 @@ class SteamPluginAccountsMixin:
             )
 
         subprocess.Popen(
-            [sys.executable, str(worker_script), str(self.steam_path), str(steamid64)],
+            [sys.executable, str(worker_script), str(
+                self.steam_path), str(steamid64)],
             startupinfo=startupinfo,
             creationflags=creationflags,
             start_new_session=True,
@@ -329,12 +345,14 @@ class SteamPluginAccountsMixin:
 
         try:
             self.start_steam_switch_worker(target_steamid64)
-            schedule_refresh = getattr(self, "schedule_installed_games_refresh", None)
+            schedule_refresh = getattr(
+                self, "schedule_installed_games_refresh", None)
             if callable(schedule_refresh):
                 schedule_refresh(delay_seconds=5, reset_user_paths=True)
             return f"switching account to {target_label}..."
         except Exception:
-            self.log_exception(f"failed to start switch worker for {target_label}")
+            self.log_exception(
+                f"failed to start switch worker for {target_label}")
             message = f"failed to start switch worker for {target_label}"
             self.show_switch_error_message(message)
             return message
@@ -385,7 +403,8 @@ class SteamPluginAccountsMixin:
                 except (TypeError, ValueError):
                     timestamp = 0
 
-                is_most_recent = str(user_data.get("MostRecent", "0")).strip() == "1"
+                is_most_recent = str(user_data.get(
+                    "MostRecent", "0")).strip() == "1"
                 if is_most_recent and timestamp >= selected_timestamp:
                     selected_steamid64 = steamid64
                     selected_timestamp = timestamp
@@ -400,18 +419,54 @@ class SteamPluginAccountsMixin:
 
             return str(int(chosen_steamid64) - 76561197960265728)
         except Exception:
-            self.log_exception(f"failed to resolve last known user from {self.LOGINUSERS_FILE}")
+            self.log_exception(
+                f"failed to resolve last known user from {self.LOGINUSERS_FILE}")
             return None
+
+    def _is_pid_running(self, pid):
+        try:
+            pid_int = int(pid or 0)
+        except (TypeError, ValueError):
+            return False
+        if pid_int <= 0:
+            return False
+        try:
+            import ctypes
+
+            PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+            STILL_ACTIVE = 259
+            kernel32 = ctypes.windll.kernel32
+            handle = kernel32.OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION, False, pid_int)
+            if not handle:
+                return False
+            try:
+                exit_code = ctypes.c_ulong()
+                if kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+                    return exit_code.value == STILL_ACTIVE
+                return True
+            finally:
+                kernel32.CloseHandle(handle)
+        except Exception:
+            return False
 
     def get_active_steam_user_id(self):
         try:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"SOFTWARE\Valve\Steam\ActiveProcess") as key:
                 active_user, _ = winreg.QueryValueEx(key, "ActiveUser")
+                try:
+                    steam_pid, _ = winreg.QueryValueEx(key, "pid")
+                except OSError:
+                    steam_pid = 0
             active_user = str(active_user).strip()
-            if active_user and active_user != "0":
-                return active_user
-            # at account picker / signed out: ActiveUser is 0 so do not treat loginusers MostRecent as active
-            return None
+            if not active_user or active_user == "0":
+                # at account picker / signed out: ActiveUser is 0 so do not treat loginusers MostRecent as active
+                return None
+            # registry ActiveUser can persist across an unclean exit (power off, reboot, crash)
+            # so require the recorded steam pid to still be alive before treating user as active
+            if not self._is_pid_running(steam_pid):
+                return None
+            return active_user
         except Exception:
             return None
 

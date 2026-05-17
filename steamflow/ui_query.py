@@ -163,16 +163,6 @@ class SteamPluginUIQueryMixin:
                     timings, "process_empty_local_results", stage_start_time)
                 if len(results) == 1:
                     results.append(self.build_empty_state_result())
-            else:
-                if len(results) == 1:
-                    results.append(
-                        self.build_result(
-                            title="library hidden until signed in",
-                            subtitle="",
-                            icon_path=self.DEFAULT_ICON,
-                            Score=5000,
-                        )
-                    )
             if not self.has_owned_api_key():
                 results.append(self.build_api_setup_hint_result())
         else:
