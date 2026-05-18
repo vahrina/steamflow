@@ -148,7 +148,7 @@ class SteamPluginProfileMixin:
 
         current_game = str(summary.get("gameextrainfo", "") or "").strip()
         if current_game:
-            return f"Playing {current_game}"
+            return f"playing {current_game}"
 
         status_labels = {
             0: "offline",
@@ -158,7 +158,19 @@ class SteamPluginProfileMixin:
             4: "snooze",
             5: "looking to trade",
             6: "looking to play",
+            7: "invisible",
         }
+
+        # instead of waiting for api cache (up to 30s + propagation delay)
+        get_local = getattr(self, "get_active_local_persona_state", None)
+        if callable(get_local):
+            try:
+                local_state = get_local()
+                if local_state is not None:
+                    return status_labels.get(int(local_state), "")
+            except (TypeError, ValueError):
+                pass
+
         try:
             return status_labels.get(int(summary.get("personastate", 0) or 0), "")
         except (TypeError, ValueError):

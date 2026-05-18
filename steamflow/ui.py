@@ -55,6 +55,8 @@ class SteamPluginUIMixin:
             return ""
         if unlocked_count <= 0 and not self.has_current_account_local_data(app_id):
             return ""
+        if unlocked_count > total_count:
+            return f"?/{total_count}"
         return f" {unlocked_count}/{total_count}"
 
     def get_platform_suffix(self, platforms):
@@ -105,9 +107,9 @@ class SteamPluginUIMixin:
         )
 
     UPDATE_STATUS_MARKERS = {
-        "Updating": " vv",
+        "Updating": " ~~",
         "Update Paused": " ||",
-        "Update Queued": " ??",
+        "Update Queued": " ..",
         "Update Required": " !!",
     }
 

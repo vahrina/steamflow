@@ -129,7 +129,7 @@ class WishlistHarness(SteamPluginWishlistMixin, SteamPluginStorageMixin, SteamPl
     def process_game_data(self, game_data, allow_cold_metric_fetch=True):
         return {
             # \U0001F6D2
-            "Title": f"\U0001F6D2 {game_data['name']}",
+            "Title": f"{game_data['name']}",
             "SubTitle": "Open in Steam store",
             "IcoPath": "icon",
             "AppID": str(game_data["id"]),
@@ -179,8 +179,8 @@ class WishlistTests(unittest.TestCase):
 
             results = harness.build_wishlist_results()
 
-            self.assertEqual(results[0]["Title"], "\U0001F6D2 Newer")
-            self.assertEqual(results[1]["Title"], "\U0001F6D2 Older")
+            self.assertEqual(results[0]["Title"], "Newer")
+            self.assertEqual(results[1]["Title"], "Older")
 
     def test_build_wishlist_results_adds_status_row_and_hides_placeholder_items(self):
         with TemporaryDirectory() as temp_dir:
@@ -196,7 +196,7 @@ class WishlistTests(unittest.TestCase):
                 results[0]["action"],
                 {"method": "open_my_steam_wishlist", "parameters": []},
             )
-            self.assertEqual(results[1]["Title"], "\U0001F6D2 Newer")
+            self.assertEqual(results[1]["Title"], "Newer")
             self.assertEqual(harness.started_workers, [["10"]])
 
     def test_build_wishlist_results_filters_loaded_titles_by_query(self):
@@ -210,7 +210,7 @@ class WishlistTests(unittest.TestCase):
             results = harness.build_wishlist_results("final")
 
             self.assertEqual(len(results), 1)
-            self.assertEqual(results[0]["Title"], "\U0001F6D2 Final Fantasy")
+            self.assertEqual(results[0]["Title"], "Final Fantasy")
 
     def test_build_wishlist_results_returns_search_status_when_matches_are_still_loading(self):
         with TemporaryDirectory() as temp_dir:

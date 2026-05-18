@@ -236,7 +236,7 @@ class StoreMetricsTests(unittest.TestCase):
         )
 
         self.assertIn("Owned game, open in Steam library", result["SubTitle"])
-        self.assertEqual(result["Title"], "\U0001F3AE Dota 2 [Owned]")
+        self.assertEqual(result["Title"], "Dota 2 [Owned]")
         self.assertEqual(
             result["Action"],
             {"method": "open_steam_library_game_details",

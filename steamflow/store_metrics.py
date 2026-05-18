@@ -481,8 +481,10 @@ class SteamPluginStoreMetricsMixin:
                 f"{owned_playtime_str}{achievement_progress_str}{player_count_str}"
             ).lstrip(" |")
             action_method = "open_steam_library_game_details"
-            title_marker = " ↓" if not self.get_install_path(app_id) else " ✔"
-            title_prefix = "\U0001F3AE"
+            title_marker = " >>" if not self.get_install_path(
+                app_id) else " --"
+            # \U0001F3AE
+            title_prefix = ""
         else:
             # unpurchased store result — price/date/reviews only
             price_str = self.format_store_price_or_availability(

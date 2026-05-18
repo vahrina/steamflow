@@ -22,15 +22,46 @@ feel free to make your own changes, the ui will automatically change upon saving
 
 ## ui explanation
 
-as per `ui.py`, l:107 - if the markers are confusing, swap them for whatever you prefer, e.g. `↓` for updating
+as per `ui.py`, l:107 - if the markers are confusing, swap them for whatever you prefer
 
 ```py
 UPDATE_STATUS_MARKERS = {
-    "Updating": " vv",
+    "Updating": " ~~",
     "Update Paused": " ||",
-    "Update Queued": " ??",
+    "Update Queued": " ..",
     "Update Required": " !!",
 }
+```
+
+additional (not- &) installed games can be found in `store_metrics.py` l:484
+
+```py
+title_marker = " >>" if not self.get_install_path(
+    app_id) else " --"
+```
+
+### ideas for markers if you're unsatisfied with the defaults
+
+**symbolic/arrow**
+
+```py
+"Updating": " =>",
+"Update Paused": " -|",
+"Update Queued": " ->",
+"Update Required": " !>",
+# installed: " **" or " ::"
+# not installed: " ++" or " >>"
+```
+
+**unicode**
+
+```py
+"Updating": " ↻ ",
+"Update Paused": " ⏸ ",
+"Update Queued": " ⏳ ",
+"Update Required": " ↑ ",
+# installed: " ✔ "
+# not installed: " ○ " or " ◌ "
 ```
 
 ## steam web api
