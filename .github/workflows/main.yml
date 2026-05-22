@@ -6,69 +6,120 @@ on:
   workflow_dispatch:
 
   push:
-    branches: [ main ]
-    paths-ignore:
-      - '.github/workflows/*'
+    branches: [main]
 
 jobs:
   build:
     runs-on: windows-latest
-    
+
     permissions:
       contents: write
 
     env:
-      python_ver: 3.11
+      python_ver: '3.11'
+      release_zip: steamflow.zip
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ env.python_ver }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.python_ver }}
+      - name: Set up Python ${{ env.python_ver }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.python_ver }}
 
-    - name: Get plugin version from plugin.json
-      id: version
-      uses: notiz-dev/github-action-json-property@release
-      with:
-        path: 'plugin.json'
-        prop_path: 'Version'
+      - name: Get plugin version from plugin.json
+        id: version
+        uses: notiz-dev/github-action-json-property@release
+        with:
+          path: plugin.json
+          prop_path: Version
 
-    - name: Install dependencies into lib folder
-      shell: pwsh
-      run: |
-        python -m pip install --upgrade pip
-        if (Test-Path .\lib) {
-          Remove-Item .\lib -Recurse -Force
-        }
-        # Install Windows runtime dependencies into the ./lib directory
-        pip install flox-lib vdf urllib3 certifi pillow==12.1.0 -t .\lib
+      - name: Install dependencies into lib folder
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          if (Test-Path .\lib) {
+            Remove-Item .\lib -Recurse -Force
+          }
+          # flox-lib required for portable installs; pillow omitted (optional framed avatars)
+          pip install --no-cache-dir flox-lib vdf urllib3 certifi -t .\lib
+          $emscripten = Join-Path .\lib 'urllib3\contrib\emscripten'
+          if (Test-Path $emscripten) {
+            Remove-Item $emscripten -Recurse -Force
+          }
+          Get-ChildItem .\lib -Recurse -Directory -Filter '__pycache__' -Force |
+            Remove-Item -Recurse -Force
 
-    - name: Create release zip
-      shell: pwsh
-      run: |
-        $staging = Join-Path $PWD '.release'
-        if (Test-Path $staging) {
-          Remove-Item $staging -Recurse -Force
-        }
-        New-Item -ItemType Directory -Path $staging | Out-Null
-        Get-ChildItem -Force | Where-Object { $_.Name -notin '.git', '.github', '.release' } | ForEach-Object {
-          Copy-Item -LiteralPath $_.FullName -Destination $staging -Recurse -Force
-        }
-        $zipPath = Join-Path $PWD 'Flow.Launcher.Plugin.SteamFlow.zip'
-        if (Test-Path $zipPath) {
-          Remove-Item $zipPath -Force
-        }
-        Compress-Archive -Path (Join-Path $staging '*') -DestinationPath $zipPath
+      - name: Create release zip
+        shell: pwsh
+        run: |
+          function Copy-Tree {
+            param(
+              [string]$Source,
+              [string]$Destination
+            )
+            if (-not (Test-Path -LiteralPath $Source)) {
+              return
+            }
+            New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+            Get-ChildItem -LiteralPath $Source -Force | ForEach-Object {
+              if ($_.Name -eq '__pycache__') {
+                return
+              }
+              $target = Join-Path $Destination $_.Name
+              if ($_.PSIsContainer) {
+                Copy-Tree -Source $_.FullName -Destination $target
+              }
+              else {
+                Copy-Item -LiteralPath $_.FullName -Destination $target -Force
+              }
+            }
+          }
 
-    - name: Publish Release
-      if: success()
-      uses: softprops/action-gh-release@v1
-      with:
-        # The zip file to upload
-        files: 'Flow.Launcher.Plugin.SteamFlow.zip'
-        # The release will be tagged with "v" + the version from plugin.json (e.g., v1.0.0)
-        tag_name: "v${{steps.version.outputs.prop}}"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          $staging = Join-Path $PWD '.release'
+          if (Test-Path $staging) {
+            Remove-Item $staging -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path $staging | Out-Null
+
+          $rootFiles = @(
+            'main.py',
+            'plugin.json',
+            'readme.md',
+            'SettingsTemplate.yaml',
+            'steam_switch_worker.py',
+            'steam_wishlist_worker.py'
+          )
+          foreach ($fileName in $rootFiles) {
+            if (Test-Path -LiteralPath $fileName) {
+              Copy-Item -LiteralPath $fileName -Destination (Join-Path $staging $fileName) -Force
+            }
+          }
+
+          foreach ($dirName in @('docs', 'icons', 'lib', 'steamflow')) {
+            Copy-Tree -Source (Join-Path $PWD $dirName) -Destination (Join-Path $staging $dirName)
+          }
+
+          Get-ChildItem -LiteralPath $staging -Recurse -Directory -Filter '__pycache__' -Force |
+            Remove-Item -Recurse -Force
+
+          $zipPath = Join-Path $PWD $env:release_zip
+          if (Test-Path $zipPath) {
+            Remove-Item $zipPath -Force
+          }
+          Compress-Archive -Path (Join-Path $staging '*') -DestinationPath $zipPath
+
+          $sizeKb = [math]::Round((Get-Item $zipPath).Length / 1KB, 1)
+          Write-Host "Created $env:release_zip ($sizeKb KB)"
+
+      - name: Publish Release
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.release_zip }}
+          tag_name: v${{ steps.version.outputs.prop }}
+          name: v${{ steps.version.outputs.prop }}
+          make_latest: true
+          overwrite_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
