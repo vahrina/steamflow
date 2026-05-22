@@ -15,7 +15,7 @@ LIGHTWEIGHT_METHODS = {
     "open_steam",
     "open_steam_refund_page",
     "open_steam_discussions_page",
-    "open_steam_friends",
+
     "open_steam_guides_page",
     "open_steam_library_game_details",
     "open_my_steam_wishlist",
@@ -27,6 +27,10 @@ LIGHTWEIGHT_METHODS = {
     "install_steam_game",
     "uninstall_steam_game",
     "open_local_files",
+    "launch_game",
+    "open_steam_user_profile",
+    "open_steam_user_library",
+    "open_steam_user_inventory",
 }
 
 

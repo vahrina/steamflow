@@ -250,7 +250,7 @@ class SteamPluginWishlistMixin:
             release_text = str(metadata.get(
                 "release_date_text", "") or "").strip()
             if release_text and release_text.lower() not in self.RELEASE_DATE_PLACEHOLDER_VALUES:
-                parts.append(f"coming soon: {release_text}")
+                parts.append(f"{release_text}")
             else:
                 parts.append("coming soon")
         else:
@@ -269,8 +269,7 @@ class SteamPluginWishlistMixin:
             if has_price or is_free:
                 review_summary = self.get_review_score(
                     app_id, allow_network_on_miss=True)
-                review_str = self.format_review_score(
-                    review_summary).lstrip(" |")
+                review_str = self.format_review_score(review_summary)
                 if review_str:
                     parts.append(review_str)
 

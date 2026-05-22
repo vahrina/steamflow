@@ -1,6 +1,7 @@
 import json
 import threading
 import time
+from pathlib import Path
 
 try:
     from PIL import Image
@@ -175,6 +176,177 @@ class SteamPluginProfileMixin:
             return status_labels.get(int(summary.get("personastate", 0) or 0), "")
         except (TypeError, ValueError):
             return ""
+
+    FRIEND_SUMMARIES_CACHE_TTL_SECONDS = 5 * 60
+
+    def _friend_status_label(self, friend_data):
+        if not isinstance(friend_data, dict):
+            return ""
+        current_game = str(friend_data.get("gameextrainfo", "") or "").strip()
+        if current_game:
+            return f"playing {current_game}"
+        status_labels = {
+            0: "offline",
+            1: "online",
+            2: "busy",
+            3: "away",
+            4: "snooze",
+            5: "looking to trade",
+            6: "looking to play",
+            7: "invisible",
+        }
+        try:
+            return status_labels.get(int(friend_data.get("personastate", 0) or 0), "")
+        except (TypeError, ValueError):
+            return ""
+
+    def _load_friend_summaries_cache(self):
+        cache_file = getattr(self, "runtime_dir", None)
+        if cache_file is not None:
+            cache_file = Path(cache_file) / "cache_friends.json"
+        else:
+            cache_file = Path(getattr(self, "plugin_dir", Path(__file__).resolve().parent.parent)) / "var" / "cache_friends.json"
+        if not cache_file.exists():
+            return None
+        try:
+            with open(cache_file, "r", encoding="utf-8") as file_obj:
+                cache_data = json.load(file_obj)
+            return cache_data if isinstance(cache_data, dict) else None
+        except Exception:
+            return None
+
+    def _save_friend_summaries_cache(self, steamid64, friends):
+        runtime_dir = getattr(self, "runtime_dir", None)
+        if runtime_dir is None:
+            runtime_dir = Path(getattr(self, "plugin_dir", Path(__file__).resolve().parent.parent)) / "var"
+        runtime_dir = Path(runtime_dir)
+        runtime_dir.mkdir(parents=True, exist_ok=True)
+        cache_file = runtime_dir / "cache_friends.json"
+        cache_data = {
+            "steamid64": str(steamid64 or ""),
+            "fetched_at": time.time(),
+            "friends": friends,
+        }
+        try:
+            with open(cache_file, "w", encoding="utf-8") as file_obj:
+                json.dump(cache_data, file_obj)
+        except Exception:
+            self.log_exception("failed to save friend summaries cache")
+
+    def fetch_friend_summaries(self, steamid64=None):
+        api_key = self.get_owned_api_key()
+        steamid64 = str(steamid64 or self.get_active_steam_user_steamid64() or "").strip()
+        if not api_key or not steamid64:
+            return []
+
+        try:
+            list_url = (
+                "https://api.steampowered.com/ISteamUser/GetFriendList/v1/"
+                f"?key={api_key}&steamid={steamid64}&relationship=friend"
+            )
+            response = self._http_get(list_url, timeout=2, headers={"User-Agent": "Mozilla/5.0"})
+            list_data = json.loads(response.data.decode("utf-8"))
+            friends_raw = list_data.get("friendslist", {}).get("friends", [])
+            if not isinstance(friends_raw, list):
+                return []
+
+            steam_ids = []
+            for entry in friends_raw:
+                if not isinstance(entry, dict):
+                    continue
+                friend_id = str(entry.get("steamid", "") or "").strip()
+                if friend_id.isdigit():
+                    steam_ids.append(friend_id)
+            if not steam_ids:
+                return []
+
+            summaries = []
+            for offset in range(0, len(steam_ids), 100):
+                batch = steam_ids[offset : offset + 100]
+                summary_url = (
+                    "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/"
+                    f"?key={api_key}&steamids={','.join(batch)}"
+                )
+                summary_response = self._http_get(
+                    summary_url, timeout=2, headers={"User-Agent": "Mozilla/5.0"})
+                summary_data = json.loads(summary_response.data.decode("utf-8"))
+                players = summary_data.get("response", {}).get("players", [])
+                if not isinstance(players, list):
+                    continue
+                for player_data in players:
+                    if not isinstance(player_data, dict):
+                        continue
+                    friend_id = str(player_data.get("steamid", "") or "").strip()
+                    if not friend_id.isdigit():
+                        continue
+                    summaries.append(
+                        {
+                            "steamid64": friend_id,
+                            "personaname": str(player_data.get("personaname", "") or "").strip(),
+                            "personastate": int(player_data.get("personastate", 0) or 0),
+                            "gameextrainfo": str(player_data.get("gameextrainfo", "") or "").strip(),
+                        }
+                    )
+            return summaries
+        except Exception:
+            self.log_exception("failed to fetch friend summaries")
+            return []
+
+    def get_friend_summaries(self, force_refresh=False):
+        if not self.has_owned_api_key() or not self.is_owned_api_key_bound_to_active_user():
+            return []
+
+        steamid64 = self.get_active_steam_user_steamid64()
+        if not steamid64:
+            return []
+
+        if not force_refresh:
+            cache_data = self._load_friend_summaries_cache()
+            if isinstance(cache_data, dict):
+                cached_steamid64 = str(cache_data.get("steamid64", "") or "")
+                fetched_at = float(cache_data.get("fetched_at", 0) or 0)
+                friends = cache_data.get("friends", [])
+                if (
+                    cached_steamid64 == steamid64
+                    and isinstance(friends, list)
+                    and (time.time() - fetched_at) < self.FRIEND_SUMMARIES_CACHE_TTL_SECONDS
+                ):
+                    return friends
+
+        friends = self.fetch_friend_summaries(steamid64)
+        self._save_friend_summaries_cache(steamid64, friends)
+        return friends
+
+    def get_steam_user_avatar_icon(self, steamid64):
+        steamid64 = str(steamid64 or "").strip()
+        if not steamid64.isdigit():
+            return self.DEFAULT_ICON
+        steam_path = getattr(self, "steam_path", None)
+        if not steam_path:
+            return self.DEFAULT_ICON
+        avatar_path = Path(steam_path) / "config" / "avatarcache" / f"{steamid64}.png"
+        if avatar_path.exists():
+            return str(avatar_path)
+        return self.DEFAULT_ICON
+
+    def build_friend_result(self, friend_data):
+        steamid64 = str(friend_data.get("steamid64", "") or "").strip()
+        persona_name = str(friend_data.get("personaname", "") or "").strip() or steamid64
+        status_label = self._friend_status_label(friend_data)
+        title = persona_name.lower()
+        if status_label:
+            title = f"{title} · {status_label}"
+        return self.build_result(
+            title=title,
+            subtitle="",
+            icon_path=self.get_steam_user_avatar_icon(steamid64),
+            context_data=self.build_steam_user_context_data(
+                steamid64,
+                name=persona_name,
+                is_self=False,
+            ),
+            action=self.build_action("open_steam_user_profile", steamid64),
+        )
 
     def fetch_owned_app_ids_from_api(self, api_key, steamid64, timeout=3):
         api_key = self.normalize_steam_web_api_key(api_key)

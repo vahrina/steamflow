@@ -172,8 +172,6 @@ class SteamPluginUICommandsMixin:
                  self.build_action("open_steam_community_home"), 21819),
                 ("activity feed", "steam://open/activity", self.COMMUNITY_ICON,
                  self.build_action("open_steam_activity_feed"), 21818),
-                ("friends", "steam://friends", self.COMMUNITY_ICON,
-                 self.build_action("open_steam_friends"), 21817),
                 ("market", "steam://open/market", self.COMMUNITY_ICON,
                  self.build_action("open_steam_market"), 21816),
                 ("store", "steam://open/store", self.BROWSER_ICON,
@@ -289,8 +287,6 @@ class SteamPluginUICommandsMixin:
             ]
         if category == "client":
             return [
-                ("recent players", "steam://friends/players", self.COMMUNITY_ICON,
-                 self.build_action("open_steam_friends_recent_players"), 21949),
                 ("steam workshop", "steam://url/SteamWorkshop", self.DEFAULT_ICON,
                  self.build_action("open_steam_url_named_page", "SteamWorkshop"), 21941),
                 ("community home", "steam://url/CommunityHome/", self.COMMUNITY_ICON,
@@ -491,6 +487,11 @@ class SteamPluginUICommandsMixin:
                     title=title,
                     subtitle="".join(subtitle_parts),
                     icon_path=account.get("icon_path") or self.DEFAULT_ICON,
+                    context_data=self.build_steam_user_context_data(
+                        account.get("steamid64"),
+                        name=account_label,
+                        is_self=False,
+                    ),
                     action=self.build_action(
                         "switch_steam_account", account.get("steamid64")),
                     auto_complete_text=self.build_plugin_query(

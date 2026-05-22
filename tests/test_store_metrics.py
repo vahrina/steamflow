@@ -98,7 +98,7 @@ class StoreMetricsTests(unittest.TestCase):
             }
         )
 
-        self.assertEqual(result, " · Coming Soon")
+        self.assertEqual(result, "Coming Soon")
 
     def test_true_free_games_still_render_free_badge(self):
         harness = StoreMetricsHarness()
@@ -112,7 +112,7 @@ class StoreMetricsTests(unittest.TestCase):
             }
         )
 
-        self.assertEqual(result, " · Free")
+        self.assertEqual(result, "Free")
 
     def test_process_game_data_appends_real_release_date_from_appdetails(self):
         harness = StoreMetricsHarness()

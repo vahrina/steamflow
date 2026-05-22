@@ -240,15 +240,6 @@ class SteamPluginLocalMixin:
         )
         return steam_data if isinstance(steam_data, dict) else {}
 
-    def load_localconfig_friends_data(self, localconfig_path=None):
-        localconfig_path = Path(localconfig_path) if localconfig_path else (self.localconfig_path or self.get_localconfig_path())
-        if not localconfig_path or not localconfig_path.exists():
-            return {}
-
-        data = self.load_localconfig_data_root(localconfig_path)
-        friends_data = data.get("UserLocalConfigStore", {}).get("friends") or data.get("UserLocalConfigStore", {}).get("Friends")
-        return friends_data if isinstance(friends_data, dict) else {}
-
     def load_localconfig_data_root(self, localconfig_path=None):
         localconfig_path = Path(localconfig_path) if localconfig_path else (self.localconfig_path or self.get_localconfig_path())
         if not localconfig_path or not localconfig_path.exists():

@@ -141,6 +141,14 @@ class SteamPluginCoreMixin:
             data["coming_soon"] = bool(coming_soon)
         return data
 
+    def build_steam_user_context_data(self, steamid64, name=None, is_self=None):
+        data = {"menu": "steam_user", "steamid64": str(steamid64 or "").strip()}
+        if name is not None:
+            data["name"] = name
+        if is_self is not None:
+            data["is_self"] = bool(is_self)
+        return data
+
     def get_setting_bool(self, name, default):
         """Read checkbox/boolean settings from Flow. Handles bool, int, and string forms."""
         if name not in self.settings:
@@ -204,9 +212,6 @@ class SteamPluginCoreMixin:
         if self.should_hide_hidden_games():
             blacklist.update(self.load_hidden_app_ids())
         return blacklist
-
-    def should_show_platforms(self):
-        return self.get_setting_bool("show_platforms", True)
 
     def should_show_player_count(self):
         return self.get_setting_bool("show_player_count", True)

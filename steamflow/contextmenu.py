@@ -7,7 +7,10 @@ from pathlib import Path
 from flox import Flox
 
 from .actions import SteamPluginActionsMixin
-from .menu import get_game_context_menu_entries, get_steam_client_context_menu_entries
+from .menu import (
+    get_game_context_menu_entries,
+    get_steam_user_context_menu_entries,
+)
 
 try:
     import winreg
@@ -141,6 +144,26 @@ class SteamContextMenuPlugin(SteamPluginActionsMixin, Flox):
             return False
         return bool(metadata.get("coming_soon"))
 
+    def resolve_install_path(self, app_id, install_path=None):
+        if install_path:
+            return install_path
+        app_id = str(app_id or "").strip()
+        if not app_id:
+            return None
+        cache_file = self._runtime_data_dir / "cache_installed_games.json"
+        if not cache_file.exists():
+            return None
+        try:
+            with open(cache_file, "r", encoding="utf-8") as file_obj:
+                cache_data = json.load(file_obj)
+        except Exception:
+            return None
+        installed_game_paths = cache_data.get("installed_game_paths", {})
+        if not isinstance(installed_game_paths, dict):
+            return None
+        path = installed_game_paths.get(app_id)
+        return str(path) if path else None
+
     def derive_refund_state(self, data):
         refund_state = str(data.get("refund_state", "") or "")
         if refund_state:
@@ -230,7 +253,7 @@ class SteamContextMenuPlugin(SteamPluginActionsMixin, Flox):
         for entry in entries:
             self.add_item(
                 title=entry["title"],
-                subtitle=entry["subtitle"],
+                subtitle=entry.get("subtitle", ""),
                 icon=entry["icon"],
                 method=entry["method"],
                 parameters=entry.get("parameters"),
@@ -240,19 +263,41 @@ class SteamContextMenuPlugin(SteamPluginActionsMixin, Flox):
         if not isinstance(data, dict):
             return
 
-        if data.get("menu") == "steam_client":
+        if data.get("menu") in {"steam_client", "steam_user"}:
+            steamid64 = str(data.get("steamid64", "") or "").strip()
+            name = data.get("name", "User")
+            is_self = bool(data.get("is_self")) or data.get("menu") == "steam_client"
             self._add_menu_entries(
-                get_steam_client_context_menu_entries(
+                get_steam_user_context_menu_entries(
+                    steamid64,
+                    name,
+                    is_self,
                     self.default_icon,
                     self.settings_icon,
                     self.community_icon,
+                    self.default_icon,
+                )
+            )
+            return
+
+        steamid64 = str(data.get("steamid64", "") or "").strip()
+        if steamid64.isdigit() and not data.get("app_id"):
+            self._add_menu_entries(
+                get_steam_user_context_menu_entries(
+                    steamid64,
+                    data.get("name", "User"),
+                    bool(data.get("is_self")),
+                    self.default_icon,
+                    self.settings_icon,
+                    self.community_icon,
+                    self.default_icon,
                 )
             )
             return
 
         app_id = str(data.get("app_id", ""))
         name = data.get("name", "Game")
-        install_path = data.get("install_path")
+        install_path = self.resolve_install_path(app_id, data.get("install_path"))
         is_owned = bool(data.get("is_owned"))
         refund_state = self.derive_refund_state(data)
         is_unreleased = self.derive_is_unreleased(data)

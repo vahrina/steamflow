@@ -90,7 +90,9 @@ class ContextMenuRefundTests(unittest.TestCase):
 
     def test_local_game_uses_cached_app_details_without_network(self):
         with TemporaryDirectory() as temp_dir:
-            cache_path = Path(temp_dir) / "cache_metric.json"
+            runtime_dir = Path(temp_dir) / "var"
+            runtime_dir.mkdir(parents=True, exist_ok=True)
+            cache_path = runtime_dir / "cache_metric.json"
             cache_path.write_text(
                 json.dumps(
                     {
@@ -114,6 +116,37 @@ class ContextMenuRefundTests(unittest.TestCase):
             self.assertEqual(refund_state, "likely")
             self.assertEqual(plugin.fetch_calls, [])
 
+    def test_resolve_install_path_reads_installed_games_cache(self):
+        with TemporaryDirectory() as temp_dir:
+            runtime_dir = Path(temp_dir) / "var"
+            runtime_dir.mkdir(parents=True, exist_ok=True)
+            cache_path = runtime_dir / "cache_installed_games.json"
+            cache_path.write_text(
+                json.dumps(
+                    {
+                        "installed_game_paths": {
+                            "1962700": "C:/Games/Subnautica2",
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            plugin = ContextMenuHarness(temp_dir)
+
+            install_path = plugin.resolve_install_path("1962700")
+
+            self.assertEqual(install_path, "C:/Games/Subnautica2")
+
+    def test_resolve_install_path_prefers_context_data_value(self):
+        with TemporaryDirectory() as temp_dir:
+            plugin = ContextMenuHarness(temp_dir)
+
+            install_path = plugin.resolve_install_path(
+                "1962700", "D:/SteamLibrary/Subnautica2"
+            )
+
+            self.assertEqual(install_path, "D:/SteamLibrary/Subnautica2")
+
     def test_local_game_fetches_and_persists_app_details_on_cache_miss(self):
         with TemporaryDirectory() as temp_dir:
             plugin = ContextMenuHarness(temp_dir)
@@ -124,7 +157,9 @@ class ContextMenuRefundTests(unittest.TestCase):
 
             self.assertEqual(refund_state, "likely")
             self.assertEqual(plugin.fetch_calls, ["1451940"])
-            cache_data = json.loads((Path(temp_dir) / "cache_metric.json").read_text(encoding="utf-8"))
+            cache_data = json.loads(
+                (Path(temp_dir) / "var" / "cache_metric.json").read_text(encoding="utf-8")
+            )
             self.assertTrue(cache_data["app_details_cache"]["1451940"]["success"])
 
 

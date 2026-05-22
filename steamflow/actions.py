@@ -70,13 +70,37 @@ class SteamPluginActionsMixin:
         return self._start_steam_protocol("steam://openurl/https://steamcommunity.com/market/")
 
     def open_steam_my_groups(self):
-        return self._start_steam_protocol("steam://openurl/https://steamcommunity.com/my/groups/")
+        return self._start_steam_protocol(f"steam://openurl/https://steamcommunity.com/my/groups/")
 
     def open_steam_my_profile_client(self):
         steamid64 = str(self.get_active_steam_user_steamid64() or "").strip()
         if steamid64.isdigit():
-            return self._start_steam_protocol(f"steam://open/profiles/{steamid64}")
+            return self.open_steam_user_profile(steamid64)
         return self.open_steam_url("https://steamcommunity.com/my")
+
+    def open_steam_user_profile(self, steamid64):
+        steamid64 = str(steamid64 or "").strip()
+        if not steamid64.isdigit():
+            return "invalid steamid"
+        return self._start_steam_protocol(
+            f"steam://openurl/https://steamcommunity.com/profiles/{steamid64}"
+        )
+
+    def open_steam_user_library(self, steamid64):
+        steamid64 = str(steamid64 or "").strip()
+        if not steamid64.isdigit():
+            return "invalid steamid"
+        return self._start_steam_protocol(
+            f"steam://openurl/https://steamcommunity.com/profiles/{steamid64}/games/?tab=all"
+        )
+
+    def open_steam_user_inventory(self, steamid64):
+        steamid64 = str(steamid64 or "").strip()
+        if not steamid64.isdigit():
+            return "invalid steamid"
+        return self._start_steam_protocol(
+            f"steam://openurl/https://steamcommunity.com/profiles/{steamid64}/inventory"
+        )
 
     def open_steam_store_front(self):
         return self._start_steam_protocol("steam://openurl/https://store.steampowered.com/")
@@ -89,9 +113,6 @@ class SteamPluginActionsMixin:
         if not target:
             return "missing url"
         return self._open_https_in_steam_client(target)
-
-    def open_steam_friends_recent_players(self):
-        return self._start_steam_protocol("steam://friends/players")
 
     def open_steam_settings_sub_page(self, page):
         raw = str(page or "").strip().lower()
@@ -211,6 +232,19 @@ class SteamPluginActionsMixin:
             self._log_action_error(f"failed to open discussions for app {app_id}: {error}")
             return f"failed to open discussions: {str(error)}"
 
+    def launch_game(self, app_id):
+        uri = f"steam://rungameid/{app_id}"
+        try:
+            os.startfile(uri)
+            return "game launched"
+        except Exception as original_error:
+            try:
+                subprocess.run(["start", uri], shell=True)
+                return "game launched"
+            except Exception:
+                self._log_action_error(f"failed to launch game {app_id}: {original_error}")
+                return f"failed to launch game: {str(original_error)}"
+
     def open_steam_game_properties_page(self, app_id):
         uri = f"steam://gameproperties/{app_id}"
         try:
@@ -299,14 +333,6 @@ class SteamPluginActionsMixin:
         except Exception as error:
             self._log_action_error(f"failed to open settings: {error}")
             return f"failed to open settings: {str(error)}"
-
-    def open_steam_friends(self):
-        try:
-            os.startfile("steam://friends")
-            return "friends opened"
-        except Exception as error:
-            self._log_action_error(f"failed to open friends: {error}")
-            return f"failed to open friends: {str(error)}"
 
     def set_steam_friends_status(self, status):
         normalized_status = str(status or "").strip().lower()

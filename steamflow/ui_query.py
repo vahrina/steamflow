@@ -79,15 +79,17 @@ class SteamPluginUIQueryMixin:
                 self.add_result(result)
             return
 
-        if self.is_wishlist_query(search_term):
+        _wishlist_text = self.get_wishlist_query_text(search_term)
+        if _wishlist_text is not None:
             self.ensure_startup_initialized()
-            for result in self.build_wishlist_results(self.get_wishlist_query_text(search_term) or ""):
+            for result in self.build_wishlist_results(_wishlist_text):
                 self.add_result(result)
             return
 
-        if self.is_switch_account_query(search_term):
+        _switch_text = self._extract_query_suffix(search_term, self.SWITCH_ACCOUNT_QUERY_ALIASES)
+        if _switch_text is not None:
             self.ensure_startup_initialized()
-            for result in self.build_switch_account_results(self.get_switch_query_text(search_term)):
+            for result in self.build_switch_account_results(_switch_text):
                 self.add_result(result)
             return
 
@@ -103,15 +105,17 @@ class SteamPluginUIQueryMixin:
                 self.add_result(result)
             return
 
-        if self.is_clear_query(search_term):
+        _clear_text = self.get_clear_query_text(search_term)
+        if _clear_text is not None:
             self.ensure_startup_initialized()
-            for result in self.build_clear_results(self.get_clear_query_text(search_term) or ""):
+            for result in self.build_clear_results(_clear_text):
                 self.add_result(result)
             return
 
-        if self.is_settings_query(search_term):
+        _settings_text = self._extract_query_suffix(search_term, self.SETTINGS_QUERY_ALIASES)
+        if _settings_text is not None:
             self.ensure_startup_initialized()
-            for result in self.build_settings_results(self.get_settings_query_text(search_term)):
+            for result in self.build_settings_results(_settings_text):
                 self.add_result(result)
             return
 
@@ -205,7 +209,6 @@ class SteamPluginUIQueryMixin:
                 )
                 self.mark_timing(
                     timings, "process_store_results", stage_start_time)
-
                 stage_start_time = time.perf_counter()
                 results = self.merge_search_results(
                     local_matches, local_results, store_results)

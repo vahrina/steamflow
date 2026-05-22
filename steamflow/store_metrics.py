@@ -15,17 +15,14 @@ class SteamPluginStoreMetricsMixin:
     }
 
     def format_release_date_text(self, release_date_text):
-        release_date_text = str(release_date_text or "").strip()
-        if not release_date_text:
-            return ""
-        return f" | {release_date_text}"
+        return str(release_date_text or "").strip()
 
     def format_owned_playtime(self, playtime_minutes):
         if playtime_minutes is None:
             return ""
         if playtime_minutes < 60:
-            return f" | {playtime_minutes}m"
-        return f" | {playtime_minutes / 60:.1f}h"
+            return f"{playtime_minutes}m"
+        return f"{playtime_minutes / 60:.1f}h"
 
     def format_store_achievement_progress(self, achievement_progress):
         if not achievement_progress:
@@ -33,7 +30,7 @@ class SteamPluginStoreMetricsMixin:
         unlocked_count, total_count = achievement_progress
         if total_count <= 0:
             return ""
-        return f" | {unlocked_count}/{total_count}"
+        return f"{unlocked_count}/{total_count}"
 
     def format_discount_percent(self, price_info):
         if not isinstance(price_info, dict):
@@ -59,17 +56,17 @@ class SteamPluginStoreMetricsMixin:
             return ""
 
         if game_data.get("is_free") is True:
-            return " | Free"
+            return "Free"
 
         price_info = game_data.get("price")
         if price_info and "final" in price_info:
             return (
-                f" | {util_currency.format_price(price_info['final'], self.get_country_code())}"
+                f"{util_currency.format_price(price_info['final'], self.get_country_code())}"
                 f"{self.format_discount_percent(price_info)}"
             )
 
         if game_data.get("coming_soon"):
-            return " | Coming Soon"
+            return "Coming Soon"
 
         return ""
 
@@ -180,7 +177,7 @@ class SteamPluginStoreMetricsMixin:
                 return ""
         except (TypeError, ValueError):
             return ""
-        return f" | \U0001F465 {player_count:,}"
+        return f"{player_count:,} \U0001F465"
 
     def fetch_review_score(self, app_id):
         start_time = time.perf_counter()
@@ -382,8 +379,8 @@ class SteamPluginStoreMetricsMixin:
         review_score_desc = str(review_summary.get(
             "review_score_desc", "")).strip()
         if review_score_desc:
-            return f" | {percentage}% ({review_score_desc})"
-        return f" | {percentage}%"
+            return f"{percentage}% ({review_score_desc})"
+        return f"{percentage}%"
 
     def should_fetch_review_score(self, game_data):
         return self._supports_live_metrics(game_data)
@@ -475,20 +472,23 @@ class SteamPluginStoreMetricsMixin:
             achievement_progress) if should_fetch_achievements else ""
 
         # build subtitle per type
+        subtitle_parts = []
         if is_owned:
             # owned (may or may not be installed) — metrics only, no store prefix
-            subtitle = (
-                f"{owned_playtime_str}{achievement_progress_str}{player_count_str}"
-            ).lstrip(" |")
+            if owned_playtime_str:
+                subtitle_parts.append(owned_playtime_str)
+            if achievement_progress_str:
+                subtitle_parts.append(achievement_progress_str)
+            if player_count_str:
+                subtitle_parts.append(player_count_str)
+            subtitle = " · ".join(subtitle_parts)
             action_method = "open_steam_library_game_details"
             title_marker = " >>" if not self.get_install_path(
                 app_id) else " --"
             # \U0001F3AE
             title_prefix = ""
         else:
-            # unpurchased store result — price/date/reviews only
-            price_str = self.format_store_price_or_availability(
-                game_data, is_owned=False)
+            # unpurchased store result — price/date/reviews/player count
             release_date_str = (
                 self.format_release_date_text(
                     game_data.get("release_date_text"))
@@ -496,11 +496,22 @@ class SteamPluginStoreMetricsMixin:
                 else ""
             )
             if coming_soon:
-                subtitle = ("coming soon" + release_date_str).lstrip(" |")
+                if release_date_str:
+                    subtitle_parts.append(release_date_str)
+                else:
+                    subtitle_parts.append("coming soon")
             else:
-                subtitle = (price_str + review_score_str).lstrip(" |")
-                if not subtitle:
-                    subtitle = release_date_str.lstrip(" |")
+                price_str = self.format_store_price_or_availability(
+                    game_data, is_owned=False)
+                if price_str:
+                    subtitle_parts.append(price_str)
+                if release_date_str:
+                    subtitle_parts.append(release_date_str)
+                if review_score_str:
+                    subtitle_parts.append(review_score_str)
+            if player_count_str:
+                subtitle_parts.append(player_count_str)
+            subtitle = " · ".join(subtitle_parts)
             action_method = "open_steam_store_page"
             title_marker = ""
             title_prefix = ""
@@ -514,6 +525,7 @@ class SteamPluginStoreMetricsMixin:
                 app_id=app_id,
                 name=name,
                 is_owned=is_owned,
+                install_path=self.get_install_path(app_id) if is_owned else None,
                 coming_soon=game_data.get("coming_soon"),
             ),
             action=self.build_action(action_method, app_id),

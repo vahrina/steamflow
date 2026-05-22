@@ -12,24 +12,61 @@ def get_refund_menu_copy(refund_state, name):
     return "", ""
 
 
-def get_steam_client_context_menu_entries(default_icon, settings_icon, community_icon):
-    return [
-        {
-            "title": "client",
-            "icon": default_icon,
-            "method": "open_steam",
-        },
-        {
-            "title": "settings",
-            "icon": settings_icon,
-            "method": "open_steam_settings",
-        },
-        {
-            "title": "friends",
-            "icon": community_icon,
-            "method": "open_steam_friends",
-        },
-    ]
+def get_steam_user_context_menu_entries(
+    steamid64,
+    name,
+    is_self,
+    default_icon,
+    settings_icon,
+    community_icon,
+    browser_icon,
+):
+    entries = []
+    steamid64 = str(steamid64 or "").strip()
+    if steamid64.isdigit():
+        entries.extend(
+            [
+                {
+                    "title": "profile",
+                    "subtitle": "",
+                    "icon": default_icon,
+                    "method": "open_steam_user_profile",
+                    "parameters": [steamid64]
+                },
+                {
+                    "title": "library",
+                    "subtitle": "",
+                    "icon": browser_icon,
+                    "method": "open_steam_user_library",
+                    "parameters": [steamid64]
+                },
+                {
+                    "title": "inventory",
+                    "subtitle": "",
+                    "icon": community_icon,
+                    "method": "open_steam_user_inventory",
+                    "parameters": [steamid64]
+                },
+                {
+                    "title": "groups",
+                    "subtitle": "",
+                    "icon": default_icon,
+                    "method": "open_steam_my_groups",
+                },
+            ]
+        )
+    if is_self:
+        entries.extend(
+            [
+                {
+                    "title": "settings",
+                    "subtitle": "",
+                    "icon": settings_icon,
+                    "method": "open_steam_settings"
+                }
+            ]
+        )
+    return entries
 
 
 def get_game_context_menu_entries(
@@ -54,8 +91,8 @@ def get_game_context_menu_entries(
     if app_id:
         entries.append(
             {
-                "title": "in store",
-                "subtitle": f"{name} {app_id}",
+                "title": f"store page",
+                "subtitle": "",
                 "icon": default_icon,
                 "method": "open_steam_store_page",
                 "parameters": [app_id],
@@ -63,12 +100,31 @@ def get_game_context_menu_entries(
         )
         entries.append(
             {
-                "title": "in steamdb",
-                "subtitle": f"{name} {app_id}",
+                "title": f"steamdb",
+                "subtitle": "",
                 "icon": steamdb_icon,
                 "method": "open_steamdb_page",
                 "parameters": [app_id],
             }
+        )
+    if app_id and install_path:
+        entries.extend(
+            [
+                {
+                    "title": "launch options",
+                    "subtitle": "",
+                    "icon": properties_icon,
+                    "method": "open_steam_game_properties_page",
+                    "parameters": [app_id],
+                },
+                {
+                    "title": "local files",
+                    "subtitle": "",
+                    "icon": location_icon,
+                    "method": "open_local_files",
+                    "parameters": [install_path],
+                },
+            ]
         )
         if not is_unreleased:
             entries.append(

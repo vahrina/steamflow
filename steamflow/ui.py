@@ -2,7 +2,10 @@ import os
 import subprocess
 
 from . import util_steam_date
-from .menu import get_game_context_menu_entries, get_steam_client_context_menu_entries
+from .menu import (
+    get_game_context_menu_entries,
+    get_steam_user_context_menu_entries,
+)
 
 
 class SteamPluginUIMixin:
@@ -59,15 +62,6 @@ class SteamPluginUIMixin:
             return f"?/{total_count}"
         return f" {unlocked_count}/{total_count}"
 
-    def get_platform_suffix(self, platforms):
-        if not self.should_show_platforms():
-            return ""
-        labels = [label for key, label in self.PLATFORM_LABELS.items()
-                  if platforms.get(key)]
-        if not labels:
-            return ""
-        return f" ({'/'.join(labels)})"
-
     def build_empty_state_result(self, search_term=None):
         if search_term:
             return self.build_result(
@@ -97,11 +91,22 @@ class SteamPluginUIMixin:
 
     def build_launch_steam_result(self):
         extra = self.get_launch_steam_result_subtitle()
+        steamid64 = self.get_active_steam_user_steamid64()
+        user_details = self.get_steam_user_details(steamid64) if steamid64 else {}
+        account_label = (
+            user_details.get("persona_name")
+            or user_details.get("account_name")
+            or "steam"
+        )
         return self.build_result(
             title=self.get_launch_steam_subtitle() or "steam",
             subtitle=extra,
             icon_path=self.get_active_steam_avatar_icon(),
-            context_data={"menu": "steam_client", "name": "Steam"},
+            context_data=self.build_steam_user_context_data(
+                steamid64,
+                name=str(account_label),
+                is_self=True,
+            ),
             action=self.build_action("open_steam"),
             Score=10000,
         )
@@ -190,18 +195,23 @@ class SteamPluginUIMixin:
             action=self.build_action(method, *parameters),
         )
 
-    def get_steam_client_context_menu_items(self):
+    def get_steam_user_context_menu_items(self, steamid64, name="User", is_self=False):
         return [
             self.build_context_menu_item(
                 entry["title"],
-                entry["subtitle"],
+                entry.get("subtitle", ""),
                 entry["method"],
+                *entry.get("parameters", []),
                 icon_path=entry["icon"],
             )
-            for entry in get_steam_client_context_menu_entries(
+            for entry in get_steam_user_context_menu_entries(
+                steamid64,
+                name,
+                is_self,
                 self.DEFAULT_ICON,
                 self.SETTINGS_ICON,
                 self.COMMUNITY_ICON,
+                self.BROWSER_ICON,
             )
         ]
 
@@ -216,7 +226,7 @@ class SteamPluginUIMixin:
         items = [
             self.build_context_menu_item(
                 entry["title"],
-                entry["subtitle"],
+                entry.get("subtitle", ""),
                 entry["method"],
                 *entry.get("parameters", []),
                 icon_path=entry["icon"],
@@ -248,8 +258,23 @@ class SteamPluginUIMixin:
         if not isinstance(data, dict):
             return
 
-        if data.get("menu") == "steam_client":
-            items = self.get_steam_client_context_menu_items()
+        if data.get("menu") in {"steam_client", "steam_user"}:
+            steamid64 = data.get("steamid64") or self.get_active_steam_user_steamid64()
+            name = data.get("name", "User")
+            is_self = bool(data.get("is_self")) or data.get("menu") == "steam_client"
+            items = self.get_steam_user_context_menu_items(
+                steamid64, name=name, is_self=is_self)
+            for item in items:
+                self.add_result(item)
+            return
+
+        steamid64 = str(data.get("steamid64", "") or "").strip()
+        if steamid64.isdigit() and not data.get("app_id"):
+            items = self.get_steam_user_context_menu_items(
+                steamid64,
+                name=data.get("name", "User"),
+                is_self=bool(data.get("is_self")),
+            )
             for item in items:
                 self.add_result(item)
             return
@@ -264,16 +289,3 @@ class SteamPluginUIMixin:
         for item in self.get_context_menu_items(app_id, name, install_path, is_owned=is_owned, refund_state=refund_state):
             self.add_result(item)
 
-    def launch_game(self, app_id):
-        uri = f"steam://rungameid/{app_id}"
-        try:
-            os.startfile(uri)
-            return "game launched"
-        except Exception as original_error:
-            try:
-                subprocess.run(["start", uri], shell=True)
-                return "game launched"
-            except Exception:
-                self.log(
-                    "error", f"failed to launch game {app_id}: {original_error}")
-                return f"failed to launch game: {str(original_error)}"

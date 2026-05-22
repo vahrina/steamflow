@@ -111,12 +111,6 @@ class SteamPlugin(
         "character creator",
         "cosmetic pack",
     )
-    PLATFORM_LABELS = {
-        "windows": "Win",
-        "mac": "Mac",
-        "linux": "Linux",
-    }
-
     def __init__(self):
         super().__init__()
         self.plugin_dir = PACKAGE_ROOT
