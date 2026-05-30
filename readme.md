@@ -22,7 +22,7 @@ feel free to make your own changes, the ui will automatically change upon saving
 
 ## ui explanation
 
-as per `ui.py`, l:107 - if the markers are confusing, swap them for whatever you prefer
+as per `steamflow/ui.py`, l:107 - if the markers are confusing, swap them for whatever you prefer
 
 ```py
 UPDATE_STATUS_MARKERS = {
@@ -62,6 +62,27 @@ title_marker = " >>" if not self.get_install_path(
 "Update Required": " ↑ ",
 # installed: " ✔ "
 # not installed: " ○ " or " ◌ "
+```
+
+## shortcuts
+
+always get where you want immediately, you may change the shortcuts to your liking in `steamflow/ui-commands.py`, l:7-19
+
+```py
+class SteamPluginUICommandsMixin:
+    OWNED_API_QUERY_ALIASES = {"api", "api key", "apikey", }
+    SWITCH_ACCOUNT_QUERY_ALIASES = {"switch", "account", "user", "sw", "acc"}
+    STATUS_QUERY_ALIASES = {"status", "statuses", "s"}
+    EXIT_QUERY_ALIASES = {"exit", "quit", "kill"}
+    RESTART_QUERY_ALIASES = {"restart", "relaunch", "reboot", "r"}
+    CLEAR_QUERY_ALIASES = {"clear", "clean", "purge", "cl"}
+    SETTINGS_QUERY_ALIASES = {"settings", "setting", "s"}
+    SETTINGS_TREE_QUERY_ALIASES = {"tree", "t"}
+    SETTINGS_HELP_QUERY_ALIASES = {"?", "help", "h"}
+    SETTINGS_FZF_QUERY_ALIASES = frozenset({"fzf", "fuzzy", "find"})
+    SETTINGS_FZF_MAX_RESULTS = 40
+    WISHLIST_QUERY_ALIASES = {"wishlist", "wish list", "w"}
+    HELP_QUERY_ALIASES = {"?", "help", "h"}
 ```
 
 ## steam web api
