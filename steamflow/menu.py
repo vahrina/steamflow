@@ -1,7 +1,7 @@
 def get_refund_menu_copy(refund_state, name):
     if refund_state == "likely":
         return (
-            "refund page",
+            "refund",
             "eligible if: > 2h played within 14d of purchase",
         )
     if refund_state == "unclear":
@@ -124,6 +124,13 @@ def get_game_context_menu_entries(
                     "method": "open_local_files",
                     "parameters": [install_path],
                 },
+                {
+                    "title": "uninstall",
+                    "subtitle": "",
+                    "icon": trash_icon,
+                    "method": "uninstall_steam_game",
+                    "parameters": [app_id]
+                }
             ]
         )
         if not is_unreleased:
@@ -177,16 +184,5 @@ def get_game_context_menu_entries(
                 "parameters": [app_id],
             }
         )
-
-        if app_id:
-            entries.append(
-                {
-                    "title": "uninstall game",
-                    "subtitle": "",
-                    "icon": trash_icon,
-                    "method": "uninstall_steam_game",
-                    "parameters": [app_id],
-                }
-            )
 
     return entries

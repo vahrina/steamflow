@@ -171,6 +171,11 @@ class SteamPluginUIMixin:
         has_current_account_local_data = self.has_current_account_local_data(
             app_id)
 
+        if title_marker and self.should_redirect_on_update_pending():
+            action = self.build_action("open_steam_library_game_details", app_id)
+        else:
+            action = self.build_action("launch_game", app_id)
+
         return self.build_result(
             # leading controller emoji: \U0001F3AE
             title=f"{name}{title_marker}",
@@ -184,7 +189,7 @@ class SteamPluginUIMixin:
                 playtime_minutes=playtime_minutes,
                 has_current_account_local_data=has_current_account_local_data,
             ),
-            action=self.build_action("launch_game", app_id),
+            action=action,
         )
 
     def build_context_menu_item(self, title, subtitle, method, *parameters, icon_path=None):

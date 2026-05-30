@@ -1,8 +1,9 @@
 body:
+  # ui
   - type: textBlock
     attributes:
       name: help_command_label
-      description: "toggle the visibility of following options"
+      description: "~~ toggle which commands appear in the help menu `steam ?`"
 
   - type: checkbox
     attributes:
@@ -52,23 +53,42 @@ body:
       label: "exit"
       defaultValue: true
 
+  # settings
+  - type: textBlock
+    attributes:
+      name: help_settings_options_label
+      description: "~~ general"
+
+  - type: checkbox
+    attributes:
+      name: redirect_on_update_pending
+      label: "open library page when update finishes instead of launching"
+      description: "default: open lib | false: launch game after update"
+      defaultValue: true
+
   - type: input
     attributes:
       name: settings_tree_opener_exe
-      label: "open `tree.md` with preferred app"
-      description: "full path to an editor/viewer exe"
+      label: "open tree.md with ..?"
+      description: "full path to a preferred editor/viewer exe, default: empty (system default)"
       defaultValue: ""
 
   - type: input
     attributes:
       name: blacklisted_app_ids
       label: "hidden apps"
-      description: "comma separated list of app ids to hide\n[def: steamw. comm. redis. (228980)]"
+      description: "comma separated list of app ids to hide\n[def: steamworks comm. redis. (228980)]"
       defaultValue: "228980"
+
+  # debug 
+  - type: textBlock
+    attributes:
+      name: debug_section_label
+      description: "~~ debug"
 
   - type: checkbox
     attributes:
       name: enable_perf_logging
-      label: "[debug] enable perf logging"
-      description: "log slow query stages & network calls to `plugin_steamflow.log`"
+      label: "performance logging"
+      description: "log slow query stages & network calls to plugin_steamflow.log"
       defaultValue: false

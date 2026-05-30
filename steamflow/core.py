@@ -279,6 +279,9 @@ class SteamPluginCoreMixin:
     def should_offer_refund_shortcut(self):
         return self.get_setting_bool("show_refund_shortcut", True)
 
+    def should_redirect_on_update_pending(self):
+        return self.get_setting_bool("redirect_on_update_pending", True)
+
     def should_log_performance(self):
         return self.get_setting_bool("enable_perf_logging", False)
 

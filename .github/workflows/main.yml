@@ -41,7 +41,6 @@ jobs:
           if (Test-Path .\lib) {
             Remove-Item .\lib -Recurse -Force
           }
-          # flox-lib required for portable installs; pillow omitted (optional framed avatars)
           pip install --no-cache-dir flox-lib vdf urllib3 certifi -t .\lib
           $emscripten = Join-Path .\lib 'urllib3\contrib\emscripten'
           if (Test-Path $emscripten) {
